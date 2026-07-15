@@ -1,0 +1,2451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none';">
+<meta name="referrer" content="no-referrer">
+<title>AgentLens — Agentforce Trace Visualizer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--border:#2e3348;
+  --text:#e2e4ed;--text-dim:#8b8fa3;--text-bright:#ffffff;
+  --blue:#4e8cff;--blue-bg:rgba(78,140,255,.12);--blue-border:rgba(78,140,255,.3);
+  --green:#34d399;--green-bg:rgba(52,211,153,.12);--green-border:rgba(52,211,153,.3);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,.12);--purple-border:rgba(167,139,250,.3);
+  --orange:#fb923c;--orange-bg:rgba(251,146,60,.12);--orange-border:rgba(251,146,60,.3);
+  --gray:#6b7280;--teal:#2dd4bf;--cyan:#22d3ee;--yellow:#fbbf24;--red:#f87171;
+  --radius:10px;--radius-sm:6px;
+  --font-mono:'SF Mono','Cascadia Code','Fira Code',Consolas,monospace;
+}
+.light{
+  --bg:#f5f6fa;--surface:#ffffff;--surface2:#f0f1f5;--border:#d4d7e3;
+  --text:#1e2030;--text-dim:#6b7084;--text-bright:#000000;
+  --blue:#2563eb;--blue-bg:rgba(37,99,235,.08);--blue-border:rgba(37,99,235,.25);
+  --green:#059669;--green-bg:rgba(5,150,105,.08);--green-border:rgba(5,150,105,.25);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,.08);--purple-border:rgba(124,58,237,.25);
+  --orange:#ea580c;--orange-bg:rgba(234,88,12,.08);--orange-border:rgba(234,88,12,.25);
+  --gray:#6b7280;--teal:#0d9488;--cyan:#0891b2;--yellow:#d97706;--red:#dc2626;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;
+  display:flex;flex-direction:column}
+body.app-viz{height:100vh;overflow:hidden}
+.app-header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding:8px 20px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;z-index:100}
+.app-header h1{font-size:17px;font-weight:700;color:var(--text-bright)}
+.header-meta{display:flex;gap:12px;flex-wrap:wrap;flex:1}
+.meta-chip{font-size:11px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:4px 10px;color:var(--text-dim)}
+.meta-chip strong{color:var(--text);font-weight:600}
+.header-actions{display:flex;gap:8px;align-items:center}
+.btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);padding:6px 12px;font-size:12px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+#mainViz:not(.hidden){display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.layout{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;max-width:1680px;width:100%;
+  margin:0 auto;padding:10px 16px;flex:1;min-height:0;align-items:stretch}
+@media(max-width:1024px){.layout{grid-template-columns:1fr;height:auto;min-height:0}}
+.panel--inspector{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel--inspector .fsm-playbar{flex-shrink:0}
+.panel--inspector .fsm-single-card{flex:1;overflow-y:auto;padding:14px 16px}
+.panel--context{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel--context .graph-wrap#fsmWrap{flex:1 1 0;min-height:120px;overflow:hidden}
+.panel--context .topic-list{flex-shrink:0;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px}
+.topic-pill{font-size:11px;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text-dim);cursor:pointer;font-weight:500;transition:border-color .15s,color .15s,background .15s;white-space:nowrap}
+.topic-pill:hover{border-color:var(--blue);color:var(--blue)}
+.topic-pill.active{border-color:var(--cyan);color:var(--cyan);background:rgba(34,211,238,.1)}
+.light .topic-pill.active{border-color:var(--cyan);color:var(--cyan);background:rgba(8,145,178,.08)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;display:flex;flex-direction:column;min-height:0;max-height:100%;transition:width .3s ease,min-width .3s ease}
+.panel-h{padding:10px 14px;border-bottom:1px solid var(--border);font-size:clamp(11px,1.4vw,13px);font-weight:700;
+  color:var(--text-bright);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between}
+.graph-wrap{flex:1;width:100%;min-height:200px;background:var(--surface2);position:relative;touch-action:none}
+.graph-wrap#topicGraph{
+  flex:1 1 0;min-height:120px;
+  overflow:hidden;position:relative;min-width:0}
+.graph-wrap#topicGraph svg{display:block;width:100%;height:100%;cursor:grab}
+.graph-wrap#topicGraph svg.panning{cursor:grabbing}
+.graph-wrap svg{display:block;width:100%;height:100%;cursor:default}
+.graph-wrap#fsmWrap{flex:1 1 0;min-height:120px;height:auto!important;max-height:none;display:flex;flex-direction:column;overflow:hidden}
+.fsm-playbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.fsm-playbar select,.fsm-playbar .btn-fsm{font-size:12px;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer}
+.fsm-playbar .btn-fsm{font-weight:600}
+.fsm-playbar .btn-fsm:hover{border-color:var(--blue);color:var(--blue)}
+.fsm-macro-slot{flex:1;min-height:160px;background:var(--surface2);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.fsm-macro-slot svg{display:block;width:100%;height:100%;cursor:grab}
+.fsm-macro-slot svg.panning{cursor:grabbing}
+.fsm-zoom-controls{position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:10}
+.fsm-zoom-btn,.graph-expand-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);width:28px;height:28px;font-size:14px;font-weight:700;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;opacity:.85;transition:opacity .15s,border-color .15s;padding:0}
+.fsm-zoom-btn:hover,.graph-expand-btn:hover{opacity:1;border-color:var(--blue);color:var(--blue)}
+.graph-expand-btn{color:var(--text-dim);font-size:15px;font-weight:400}
+.fsm-zoom-level{font-size:10px;color:var(--text-dim);font-family:var(--font-mono);align-self:center;padding:0 4px;user-select:none}
+.graph-fullscreen-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;animation:fadeIn .15s ease}
+.graph-fullscreen-overlay .gf-header{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.graph-fullscreen-overlay .gf-header h2{font-size:16px;font-weight:700;color:var(--text-bright);text-transform:uppercase;letter-spacing:.5px}
+.graph-fullscreen-overlay .gf-close{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600}
+.graph-fullscreen-overlay .gf-close:hover{border-color:var(--blue);color:var(--blue)}
+.graph-fullscreen-overlay .gf-body{flex:1;min-height:0;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+.graph-fullscreen-overlay .gf-body svg{width:100%;height:100%;cursor:grab}
+.graph-fullscreen-overlay .gf-body svg.panning{cursor:grabbing}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.fsm-detail-slot{flex:1;min-height:0;overflow-y:auto;background:var(--surface);
+  padding:14px 16px;font-size:clamp(11px,1.3vw,13px);line-height:1.5}
+.fsm-detail-slot:empty{display:none}
+.fsm-detail-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.55px;color:var(--text-dim);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.fsm-detail-h .fsm-detail-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:var(--surface2)}
+.fsm-detail-h .fsm-detail-badge.badge-blue{color:var(--blue);border-color:var(--blue-border)}
+.fsm-detail-h .fsm-detail-badge.badge-teal{color:var(--teal);border-color:rgba(45,212,191,.35)}
+.fsm-detail-h .fsm-detail-badge.badge-green{color:var(--green);border-color:var(--green-border)}
+.fsm-detail-h .fsm-detail-badge.badge-purple{color:var(--purple);border-color:var(--purple-border)}
+.fsm-detail-h .fsm-detail-badge.badge-orange{color:var(--orange);border-color:var(--orange-border)}
+.fsm-detail-h .fsm-detail-badge.badge-yellow{color:var(--yellow);border-color:rgba(251,191,36,.35)}
+.fsm-detail-section{margin-top:10px}
+.fsm-detail-section:first-child{margin-top:0}
+.fsm-detail-section-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);margin-bottom:5px}
+.fsm-detail-var{margin:6px 0;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2)}
+.fsm-detail-var-name{font-weight:700;color:var(--purple);font-family:var(--font-mono);font-size:12px;margin-bottom:3px}
+.fsm-detail-var-val{font-family:var(--font-mono);font-size:12px;color:var(--text);word-break:break-word}
+.fsm-detail-var-val.old{opacity:.55;text-decoration:line-through}
+.fsm-detail-prompt-buf{margin:6px 0;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--purple-border);
+  background:var(--purple-bg);font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;word-break:break-word;
+  max-height:180px;overflow-y:auto;line-height:1.5;color:var(--text)}
+.fsm-detail-response{margin:6px 0;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--green-border);
+  background:var(--green-bg);font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+.fsm-detail-reason{margin:6px 0;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface2);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:var(--text);font-style:italic}
+.fsm-detail-exec{margin:6px 0;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2)}
+.fsm-detail-exec pre{font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;word-break:break-word;
+  max-height:160px;overflow-y:auto;margin:4px 0;line-height:1.4}
+.fsm-detail-slot .fsm-llm-section{margin-top:10px}
+.fsm-detail-slot .fsm-llm-section:first-child{margin-top:0}
+.fsm-detail-slot .fsm-pre{max-height:240px}
+.fsm-detail-slot .fsm-msg-bubble{max-height:240px}
+.fsm-detail-meta{font-size:11px;color:var(--text-dim);font-family:var(--font-mono);margin-bottom:8px}
+.fsm-kv{font-size:12px;color:var(--text-dim);margin:2px 0 0;font-family:var(--font-mono);word-break:break-word}
+.fsm-chips{display:flex;flex-wrap:wrap;gap:6px}
+.fsm-chip{font-size:11px;padding:4px 9px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-mono)}
+.fsm-chip-sent{border-color:rgba(34,211,238,.35);color:var(--cyan)}
+.fsm-pre{margin:6px 0 0;font-size:12px;font-family:var(--font-mono);white-space:pre-wrap;word-break:break-word;max-height:120px;overflow:auto;background:var(--surface2);padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border)}
+.fsm-llm-section{margin-top:10px}
+.fsm-llm-section:first-child{margin-top:0}
+.fsm-llm-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.55px;color:var(--text-dim);margin-bottom:5px}
+.fsm-msg-bubble{margin:6px 0;padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;line-height:1.5;max-height:200px;overflow-y:auto;border:1px solid var(--border)}
+.fsm-msg-role{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;opacity:.78}
+.fsm-msg-system{background:var(--purple-bg);border-color:var(--purple-border)}
+.fsm-msg-user{background:var(--blue-bg);border-color:var(--blue-border)}
+.fsm-msg-assistant{background:var(--green-bg);border-color:var(--green-border)}
+.fsm-msg-tool{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.35)}
+.light .fsm-msg-tool{background:rgba(13,148,136,.08);border-color:rgba(13,148,136,.25)}
+.fsm-msg-body{white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono)}
+.svg-graph.fsm .fsm-node.dim rect{opacity:.32}
+.svg-graph.fsm .fsm-node.active rect{opacity:1;stroke:var(--cyan)!important;stroke-width:3px;filter:drop-shadow(0 0 12px rgba(34,211,238,.45))}
+.light .svg-graph.fsm .fsm-node.active rect{filter:drop-shadow(0 0 10px rgba(8,145,178,.4))}
+.svg-graph .edge{fill:none;stroke:var(--text);stroke-width:2.2;opacity:.5;stroke-linecap:round;stroke-linejoin:round}
+.svg-graph{overflow:visible}
+.svg-graph .edge-label{font-size:11px;fill:var(--text);font-family:var(--font-mono);pointer-events:none;font-weight:600}
+.svg-graph .topic-node{cursor:pointer}
+.svg-graph .topic-node circle{fill:var(--bg);stroke:var(--blue);stroke-width:2;transition:stroke-width .15s,filter .15s,stroke .15s}
+.svg-graph .topic-node.selected circle{stroke-width:2.8;filter:brightness(1.06)}
+.svg-graph .topic-node text{font-size:12px;fill:var(--text);font-weight:600;font-family:system-ui,sans-serif;pointer-events:none;text-anchor:middle}
+.svg-graph.fsm .fsm-node rect{fill:var(--bg);stroke:var(--blue);stroke-width:2;transition:stroke .25s,stroke-width .25s,opacity .25s,filter .25s}
+.svg-graph.fsm .fsm-node.fsm-node--tool rect{stroke:var(--teal)}
+.svg-graph.fsm .fsm-node.fsm-node--process rect{stroke:var(--purple);stroke-dasharray:6,3;fill:var(--purple-bg)}
+.svg-graph.fsm .fsm-node.fsm-node--llm rect{stroke:var(--blue);fill:var(--blue-bg)}
+.svg-graph.fsm .fsm-node.fsm-node--response rect{stroke:var(--green)}
+.svg-graph.fsm .fsm-node.fsm-node--user rect{stroke:var(--yellow)}
+.svg-graph.fsm .fsm-node.fsm-node--handoff rect{stroke:var(--orange);stroke-dasharray:5,3;fill:var(--orange-bg)}
+.svg-graph.fsm .fsm-node-label{fill:var(--text);font-weight:600;font-family:system-ui,sans-serif;pointer-events:none;text-anchor:middle}
+.svg-graph.fsm .fsm-node-sublabel{fill:var(--text-dim);font-weight:400;font-family:var(--font-mono);pointer-events:none;text-anchor:middle}
+.svg-graph.fsm .edge-back{stroke:var(--teal);stroke-dasharray:6,4;opacity:.65}
+.svg-graph.fsm .edge.dim{opacity:.15}
+.svg-graph.fsm .edge-back.dim{opacity:.15}
+.svg-graph.fsm .edge.active{opacity:1;stroke:var(--cyan);stroke-width:3;filter:drop-shadow(0 0 8px rgba(34,211,238,.45));transition:opacity .2s,stroke .2s,stroke-width .2s}
+.svg-graph.fsm .edge-back.active{opacity:1;stroke-width:3;filter:drop-shadow(0 0 8px rgba(45,212,191,.5));transition:opacity .2s,stroke-width .2s}
+.light .svg-graph.fsm .edge.active{filter:drop-shadow(0 0 6px rgba(8,145,178,.45))}
+.light .svg-graph.fsm .edge-back.active{filter:drop-shadow(0 0 6px rgba(13,148,136,.45))}
+.svg-graph.fsm .fsm-back-label{fill:var(--teal);font-size:10px}
+.svg-graph.fsm .fsm-loop-box{fill:none;stroke-width:1.5;stroke-dasharray:8,4;opacity:.35;pointer-events:none}
+.svg-graph.fsm .fsm-loop-box--tool{stroke:var(--teal)}
+.svg-graph.fsm .fsm-loop-label-text{font-size:11px;fill:var(--text-dim);font-weight:700;letter-spacing:.5px;font-family:system-ui,sans-serif}
+.light .svg-graph.fsm .fsm-node.fsm-node--tool rect{stroke:var(--teal)}
+.light .svg-graph.fsm .fsm-node.fsm-node--process rect{stroke:var(--purple);fill:rgba(124,58,237,.06)}
+.light .svg-graph.fsm .fsm-node.fsm-node--llm rect{fill:rgba(37,99,235,.06)}
+.light .svg-graph.fsm .fsm-node.fsm-node--handoff rect{stroke:var(--orange);fill:rgba(251,146,60,.06)}
+.metrics-bar{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);
+  padding:4px 20px;font-size:11px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.metrics-bar.hidden{display:none}
+.exec-stats-strip{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:11px;color:var(--text-dim)}
+.exec-stats-strip b{color:var(--text);font-weight:600}
+.viz-toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 16px;
+  display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.viz-toolbar .viz-toolbar-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)}
+.viz-toolbar label{font-size:11px;color:var(--text);display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+.viz-toolbar input[type=checkbox]{accent-color:var(--blue);flex-shrink:0}
+
+#mainEmpty:not(.hidden){flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(560px,calc(100vh - 56px))}
+.empty-state{text-align:center;padding:48px 24px;color:var(--text-dim)}
+.empty-state h2{color:var(--text-bright);margin-bottom:8px;font-size:20px}
+.drop-zone{max-width:560px;margin:16px auto;border:2px dashed var(--border);border-radius:var(--radius);
+  padding:32px;cursor:pointer}
+.drop-zone:hover{border-color:var(--blue);background:var(--blue-bg)}
+.btn-large{padding:10px 22px;font-size:13px;font-weight:600;border-radius:var(--radius);cursor:pointer;
+  border:1px solid var(--blue);background:var(--blue);color:#fff;margin:4px}
+.upload-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;
+  align-items:center;justify-content:center}
+.upload-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;width:90%;max-width:640px}
+.upload-modal textarea{width:100%;height:240px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-mono);font-size:11px;padding:10px}
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.btn-primary{background:var(--blue);color:#fff;border:none;padding:8px 18px;border-radius:var(--radius-sm);
+  font-weight:600;cursor:pointer}
+.hidden{display:none}
+.error-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(248,113,113,.15);
+  border:1px solid rgba(248,113,113,.4);color:var(--red);padding:10px 18px;border-radius:var(--radius);z-index:300}
+
+@media(max-width:1024px){
+  .layout{padding:10px 12px;gap:10px;grid-template-columns:1fr;height:auto}
+  .panel--context{max-height:340px}
+}
+
+@media(max-width:768px){
+  .app-header{padding:10px 14px;gap:10px}
+  .app-header h1{font-size:14px}
+  .header-meta{gap:6px}
+  .meta-chip{font-size:10px;padding:3px 8px}
+  .header-actions .btn{padding:5px 10px;font-size:11px}
+  .layout{padding:8px 10px;gap:8px}
+  .panel-h{padding:8px 12px;font-size:clamp(11px,1.4vw,13px)}
+  .fsm-playbar{padding:8px 10px;gap:6px}
+  .viz-toolbar label{font-size:10px;gap:4px}
+  .viz-toolbar .viz-toolbar-title{font-size:10px}
+  .exec-stats-strip{font-size:10px;gap:4px 8px}
+}
+</style>
+</head>
+<body class="light">
+
+<div class="app-header">
+  <h1>AgentLens</h1>
+  <div class="header-meta" id="headerMeta"></div>
+  <div class="header-actions">
+    <button class="btn" id="btnTheme">Dark</button>
+    <button class="btn" id="btnLoad">Load JSON</button>
+    <button class="btn hidden" id="btnClear">Clear</button>
+  </div>
+</div>
+<div class="metrics-bar hidden" id="metricsCard"></div>
+
+<div id="mainEmpty" class="empty-state">
+  <h2>Visualize any Agentforce agent trace</h2>
+  <p>Load a plan response from the <strong>Agentforce DX</strong> extension, then explore sub agent handoffs, finite state machines, and LLM calls — all in one view.</p>
+  <p style="font-size:12px;max-width:520px;margin:12px auto 0">Zero dependencies — runs entirely in the browser. Works with <code>file://</code> and local servers alike.</p>
+  <button class="btn-large" id="btnPaste">Paste JSON</button>
+  <label class="btn-large" style="display:inline-block;background:var(--surface2);color:var(--text);border-color:var(--border)">
+    Upload <input type="file" accept=".json,application/json" id="fileInput" class="hidden">
+  </label>
+  <div class="drop-zone" id="dropZone"><strong>Drop JSON here</strong></div>
+</div>
+
+<div id="mainViz" class="hidden">
+  <div class="layout">
+    <div class="panel panel--inspector" id="inspectorPanel">
+      <div class="panel-h"><span id="fsmTopicLabel" style="opacity:.5">select a sub agent →</span></div>
+      <div class="viz-toolbar" id="vizToolbar">
+        <span class="viz-toolbar-title">Show:</span>
+        <label title="Variable assignment and mutation steps"><input type="checkbox" id="chkVarUpdates" checked /> Variable Updates</label>
+        <label title="Planner reasoning, grounding checks, and prep actions"><input type="checkbox" id="chkReasoning" checked /> Reasoning</label>
+        <label title="State captured when entering a node"><input type="checkbox" id="chkNodeEntry" checked /> Node Entry</label>
+        <label title="Tools made available to the LLM at each step"><input type="checkbox" id="chkEnabledTools" checked /> Enabled Tools</label>
+        <label title="AgentScriptInternal_* system variables (usually noisy)"><input type="checkbox" id="chkAgentScriptVars" /> Internal Vars</label>
+      </div>
+      <div class="fsm-playbar" id="inspectorPlaybar" style="display:none">
+        <button type="button" class="btn-fsm" id="fsmBtnPrev" title="Previous event (← or K)">← Prev</button>
+        <span id="fsmStepLabel" style="font-size:12px;font-family:var(--font-mono);color:var(--text-dim);white-space:nowrap">—</span>
+        <button type="button" class="btn-fsm" id="fsmBtnNext" title="Next event (→ or J)">Next →</button>
+        <span style="font-size:10px;color:var(--text-dim);margin-left:auto">← → keys</span>
+      </div>
+      <div class="fsm-single-card" id="fsmDetailSlot"></div>
+    </div>
+    <div class="panel panel--context" id="contextPanel">
+      <div class="panel-h">Agent Graph <button type="button" class="graph-expand-btn" id="btnExpandGraph" title="Pop out graph (fullscreen)">&#x26F6;</button></div>
+      <div class="graph-wrap" id="topicGraph"></div>
+      <div class="topic-list" id="topicList"></div>
+      <div class="panel-h" style="font-size:11px">Finite State Machine — <span id="fsmDiagramLabel" style="font-weight:400;color:var(--text-dim)">select a sub agent</span> <button type="button" class="graph-expand-btn" id="btnExpandFsm" title="Pop out FSM (fullscreen)" style="margin-left:auto">&#x26F6;</button></div>
+      <div class="graph-wrap" id="fsmWrap"></div>
+    </div>
+  </div>
+</div>
+
+<div class="upload-overlay hidden" id="uploadOverlay">
+  <div class="upload-modal">
+    <h2 style="font-size:15px;margin-bottom:10px;color:var(--text-bright)">Paste Plan JSON</h2>
+    <textarea id="jsonInput" placeholder='Paste the plan response JSON from Agentforce DX here…'></textarea>
+    <div class="btn-row">
+      <button class="btn" id="btnCancel">Cancel</button>
+      <button class="btn-primary" id="btnParse">Visualize</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS_FILTERS = 'afViz2.filters';
+
+let currentData = null;
+let analysis = null;
+let vizParsed = null;
+let selectedTopicId = null;
+let fsmPlayback = { events: [], rawEvents: [], idx: -1, nodeMap: null, edgePathMap: null };
+let fsmKeyNavHandler = null;
+
+function detachFsmKeyboardNav() {
+  if (fsmKeyNavHandler) {
+    window.removeEventListener('keydown', fsmKeyNavHandler, true);
+    fsmKeyNavHandler = null;
+  }
+}
+
+function attachFsmKeyboardNav() {
+  detachFsmKeyboardNav();
+  fsmKeyNavHandler = ev => {
+    if (!selectedTopicId || !fsmPlayback.events || fsmPlayback.events.length === 0) return;
+    const tag = ev.target && ev.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || ev.target.isContentEditable) return;
+    if (ev.key === 'ArrowLeft' || ev.key === 'k' || ev.key === 'K') {
+      ev.preventDefault();
+      stepFsmPrev();
+    } else if (ev.key === 'ArrowRight' || ev.key === 'j' || ev.key === 'J') {
+      ev.preventDefault();
+      stepFsmNext();
+    }
+  };
+  window.addEventListener('keydown', fsmKeyNavHandler, true);
+}
+
+const timelineFilterPrefs = {
+  varUpdates: true,
+  reasoning: true,
+  nodeEntry: true,
+  enabledTools: true,
+  showAgentScriptVars: false,
+};
+
+function loadTimelineFilterPrefs() {
+  try {
+    const s = localStorage.getItem(LS_FILTERS);
+    if (!s) return;
+    const parsed = JSON.parse(s);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+    const allowed = Object.keys(timelineFilterPrefs);
+    for (const key of allowed) {
+      if (Object.prototype.hasOwnProperty.call(parsed, key)) {
+        timelineFilterPrefs[key] = !!parsed[key];
+      }
+    }
+  } catch (_) {}
+}
+
+function saveTimelineFilterPrefs() {
+  try {
+    localStorage.setItem(LS_FILTERS, JSON.stringify(timelineFilterPrefs));
+  } catch (_) {}
+}
+
+function syncFilterUiFromPrefs() {
+  const m = {
+    chkVarUpdates: 'varUpdates',
+    chkReasoning: 'reasoning',
+    chkNodeEntry: 'nodeEntry',
+    chkEnabledTools: 'enabledTools',
+    chkAgentScriptVars: 'showAgentScriptVars',
+  };
+  for (const [id, key] of Object.entries(m)) {
+    const el = document.getElementById(id);
+    if (el) el.checked = !!timelineFilterPrefs[key];
+  }
+}
+
+function readFilterUiToPrefs() {
+  timelineFilterPrefs.varUpdates = !!document.getElementById('chkVarUpdates')?.checked;
+  timelineFilterPrefs.reasoning = !!document.getElementById('chkReasoning')?.checked;
+  timelineFilterPrefs.nodeEntry = !!document.getElementById('chkNodeEntry')?.checked;
+  timelineFilterPrefs.enabledTools = !!document.getElementById('chkEnabledTools')?.checked;
+  timelineFilterPrefs.showAgentScriptVars = !!document.getElementById('chkAgentScriptVars')?.checked;
+}
+
+
+function stepDurationMs(step) {
+  const a = step.startExecutionTime;
+  const b = step.endExecutionTime;
+  if (a == null || b == null) return 0;
+  const d = b - a;
+  return d > 0 ? d : 0;
+}
+
+function withStepDuration(subtitle, step) {
+  const d = stepDurationMs(step);
+  if (!d) return subtitle || '';
+  const bit = `${d}ms`;
+  if (!subtitle) return bit;
+  return subtitle.includes(bit) ? subtitle : `${subtitle} · ${bit}`;
+}
+
+function computePlanExecutionStats(plan) {
+  const empty = { steps: 0, llm: 0, fn: 0, transition: 0, wall: 0 };
+  if (!plan || !plan.length) return empty;
+  let llm = 0;
+  let fn = 0;
+  let transition = 0;
+  for (const s of plan) {
+    if (s.type === 'LLMStep') llm++;
+    if (s.type === 'FunctionStep') fn++;
+    if (s.type === 'TransitionStep') transition++;
+  }
+  const wall =
+    plan.length > 1
+      ? (plan[plan.length - 1].endExecutionTime || 0) - (plan[0].startExecutionTime || 0)
+      : stepDurationMs(plan[0]) || 0;
+  return { steps: plan.length, llm, fn, transition, wall };
+}
+
+function filterVariableUpdates(updates, prefs) {
+  return updates.filter(u => {
+    const n = String(u.variable_name || '');
+    if (!prefs.showAgentScriptVars && n.startsWith('AgentScriptInternal_')) return false;
+    return true;
+  });
+}
+
+function countVisibleVarUpdates(step, prefs) {
+  const updates = step.data?.variable_updates || [];
+  if (!updates.length) return 0;
+  return filterVariableUpdates(updates, prefs).length;
+}
+
+function timelineEventMatchesFilters(ev, plan, prefs) {
+  const k = ev.kind;
+  if (k === 'variable') {
+    if (!prefs.varUpdates) return false;
+    const step = plan[ev.stepIndex];
+    const all = step.data?.variable_updates || [];
+    if (!all.length) return true;
+    return countVisibleVarUpdates(step, prefs) > 0;
+  }
+  if (k === 'action' || k === 'response') return !!prefs.reasoning;
+  if (k === 'entry') return !!prefs.nodeEntry;
+  if (k === 'enabled') return !!prefs.enabledTools;
+  return true;
+}
+
+function applyTimelineFilters(plan, rawEvents, prefs) {
+  return rawEvents.filter(ev => timelineEventMatchesFilters(ev, plan, prefs));
+}
+
+const _escDiv = document.createElement('div');
+function esc(s) {
+  if (s == null) return '';
+  _escDiv.textContent = String(s);
+  return _escDiv.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function extractToolInvocations(msg) {
+  if (!msg) return [];
+  const out = [];
+  if (msg.tool_invocation && msg.tool_invocation.name) {
+    out.push({ name: msg.tool_invocation.name, arguments: msg.tool_invocation.arguments });
+  }
+  const arr = msg.tool_invocations;
+  if (Array.isArray(arr)) {
+    for (let i = 0; i < arr.length; i++) {
+      const fn = arr[i].function;
+      if (fn && fn.name) out.push({ name: fn.name, arguments: fn.arguments });
+    }
+  }
+  return out;
+}
+
+function agentKey(name) {
+  if (!name) return 'none';
+  return String(name).toLowerCase().replace(/\s+/g, '_');
+}
+
+function getAgentForStep(step, prevAgent) {
+  const d = step.data || {};
+  if (step.type === 'LLMStep' || step.type === 'EnabledToolsStep') return agentKey(d.agent_name);
+  if (step.type === 'NodeEntryStateStep' || step.type === 'BeforeReasoningIterationStep' || step.type === 'AfterReasoningStep')
+    return agentKey(d.agent_name);
+  if (step.type === 'TransitionStep') return agentKey(d.from_agent);
+  if (step.type === 'FunctionStep') return prevAgent;
+  if (step.type === 'VariableUpdateStep') return prevAgent;
+  return prevAgent || 'none';
+}
+
+function recordDisplay(map, id, raw) {
+  if (!id || id === 'none' || !raw) return;
+  const s = String(raw).trim();
+  if (!s) return;
+  if (!map[id] || s.length > map[id].length) map[id] = s;
+}
+
+/** Induced FSM states for orchestration (not per-tool names). */
+const FSM_BUILTIN_MACRO_IDS = new Set(['Entry', 'Prep', 'LLM', 'Response', 'UserInput', 'Function']);
+const FSM_MACRO_RING_ORDER = ['Entry', 'UserInput', 'Prep', 'LLM', 'Response', 'Function'];
+const HANDOFF_PREFIX = 'Handoff\u2192';
+function handoffMacroId(toAgent) { return HANDOFF_PREFIX + String(toAgent).trim(); }
+function isHandoffMacroId(id) { return typeof id === 'string' && id.startsWith(HANDOFF_PREFIX); }
+function handoffTargetName(id) { return id.slice(HANDOFF_PREFIX.length); }
+
+function functionStepMacroId(step) {
+  const fn = step.function;
+  const raw = fn && fn.name != null ? String(fn.name).trim() : '';
+  if (!raw) return 'Function';
+  if (FSM_BUILTIN_MACRO_IDS.has(raw)) return `${raw} ·tool`;
+  return raw;
+}
+
+function stepToMacro(step) {
+  const t = step.type;
+  if (t === 'TransitionStep') {
+    const toAgent = step.data && step.data.to_agent;
+    if (toAgent) return handoffMacroId(toAgent);
+    return null;
+  }
+  if (t === 'NodeEntryStateStep') return 'Entry';
+  if (t === 'VariableUpdateStep' || t === 'BeforeReasoningIterationStep' || t === 'AfterReasoningStep' || t === 'EnabledToolsStep')
+    return 'Prep';
+  if (t === 'LLMStep') return 'LLM';
+  if (t === 'FunctionStep') return functionStepMacroId(step);
+  if (t === 'UserInputStep') return 'UserInput';
+  if (t === 'PlannerResponseStep' || t === 'ReasoningStep') return 'Response';
+  return null;
+}
+
+function emptyTopicDetails() {
+  return {
+    variableNames: new Set(),
+    variableUpdates: [],
+    enabledTools: new Set(),
+    toolsSent: new Set(),
+    toolsInvoked: new Set(),
+    toolsExecuted: new Set(),
+    toolInvocations: [],
+    functionsExecuted: [],
+    promptNames: new Set(),
+    beforeReasoningActions: new Set(),
+  };
+}
+
+function ensureTopicDetails(map, topic) {
+  if (!topic || topic === 'none') return null;
+  if (!map[topic]) map[topic] = emptyTopicDetails();
+  return map[topic];
+}
+
+function truncateJSON(obj, n) {
+  try {
+    const s = typeof obj === 'string' ? obj : JSON.stringify(obj);
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  } catch {
+    return String(obj).slice(0, n);
+  }
+}
+
+function parsePromptContentToMessages(str) {
+  if (!str || typeof str !== 'string') return [];
+  try {
+    const arr = JSON.parse(str);
+    if (!Array.isArray(arr)) return [];
+    return arr.map(item => {
+      const role = item.role || 'unknown';
+      let content = '';
+      if (item.blocks && Array.isArray(item.blocks)) {
+        content = item.blocks.map(b => (b && b.text != null ? String(b.text) : '')).join('\n');
+      } else if (typeof item.content === 'string') {
+        content = item.content;
+      }
+      return { role, content };
+    });
+  } catch {
+    return [];
+  }
+}
+
+function normalizeLlmMessages(step) {
+  const d = step.data || {};
+  let msgs = step.messages_sent;
+  if (!msgs || !msgs.length) msgs = parsePromptContentToMessages(d.prompt_content);
+  return Array.isArray(msgs) ? msgs : [];
+}
+
+function splitLlmMessages(msgs) {
+  const system = [];
+  const thread = [];
+  for (const m of msgs) {
+    const role = (m && m.role) || 'unknown';
+    const content = m.content == null ? '' : String(m.content);
+    if (role === 'system') system.push({ role, content });
+    else thread.push({ role, content });
+  }
+  return { system, thread };
+}
+
+function fsmLlmMessageBubble(role, content) {
+  const r = role === 'tool' ? 'tool' : role === 'user' ? 'user' : role === 'assistant' ? 'assistant' : 'system';
+  const cls = 'fsm-msg-bubble fsm-msg-' + r;
+  const trimmed = (content || '').trim();
+  let body;
+  if (trimmed) body = esc(content);
+  else if (role === 'assistant')
+    body = '<span style="opacity:.75;font-style:italic">(no text — likely tool call)</span>';
+  else body = '<span style="opacity:.65">(empty)</span>';
+  return `<div class="${cls}"><div class="fsm-msg-role">${esc(role)}</div><div class="fsm-msg-body">${body}</div></div>`;
+}
+
+function renderToolChipsHtml(tools) {
+  return tools.length > 0
+    ? `<div class="fsm-chips">${tools.map(x => `<span class="fsm-chip fsm-chip-sent">${esc(String(x))}</span>`).join(' ')}</div>`
+    : '<div class="fsm-kv">—</div>';
+}
+
+function renderResponseMessagesHtml(resp, maxHeight, truncLen) {
+  if (!resp.length) return '<div class="fsm-kv">—</div>';
+  return resp.map(m => {
+    const invocations = extractToolInvocations(m);
+    if (invocations.length) {
+      return invocations.map(inv =>
+        `<pre class="fsm-pre" style="max-height:${maxHeight}px"><b>Tool call</b> ${esc(String(inv.name))}(${esc(truncateJSON(inv.arguments, truncLen))})</pre>`
+      ).join('');
+    }
+    if (truncLen < 400) {
+      return `<pre class="fsm-pre" style="max-height:${maxHeight}px">${esc(truncateJSON(m.content, truncLen))}</pre>`;
+    }
+    return fsmLlmMessageBubble('assistant', m.content || '');
+  }).join('');
+}
+
+function formatFsmLlmStepBody(step) {
+  const msgs = normalizeLlmMessages(step);
+  const { system, thread } = splitLlmMessages(msgs);
+  let html = '';
+
+  html += '<div class="fsm-llm-section"><div class="fsm-llm-h">Tools available to the model</div>';
+  html += renderToolChipsHtml(step.tools_sent || []);
+  html += '</div>';
+
+  html += '<div class="fsm-llm-section"><div class="fsm-llm-h">System prompt</div>';
+  if (!system.length) html += '<div class="fsm-kv">—</div>';
+  else {
+    system.forEach((m, i) => {
+      if (system.length > 1)
+        html += `<div class="fsm-kv" style="margin-bottom:4px">Part ${i + 1} of ${system.length}</div>`;
+      html += `<pre class="fsm-pre" style="max-height:160px">${esc(m.content)}</pre>`;
+    });
+  }
+  html += '</div>';
+
+  html += '<div class="fsm-llm-section"><div class="fsm-llm-h">Messages sent to the model</div>';
+  if (!thread.length) html += '<div class="fsm-kv">—</div>';
+  else html += thread.map(m => fsmLlmMessageBubble(m.role, m.content)).join('');
+  html += '</div>';
+
+  html += '<div class="fsm-llm-section"><div class="fsm-llm-h">Model output</div>';
+  html += renderResponseMessagesHtml(step.response_messages || [], 100, 600);
+  html += '</div>';
+
+  return html;
+}
+
+
+
+
+
+
+function prettyJSON(obj, limit) {
+  try {
+    const s = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    return s.length > (limit || 2000) ? s.slice(0, (limit || 2000) - 1) + '\u2026' : s;
+  } catch { return String(obj); }
+}
+
+function buildFsmDetailHtml(ev, step) {
+  if (!ev || !step) return '';
+  const d = step.data || {};
+
+  switch (ev.kind) {
+    case 'variable': {
+      const updates = d.variable_updates || [];
+      if (!updates.length) return '<div class="fsm-detail-h">Sub Agent Setup <span class="fsm-detail-badge badge-purple">Variable Update</span></div><div class="fsm-kv">(empty)</div>';
+      let html = '<div class="fsm-detail-h">Sub Agent Setup <span class="fsm-detail-badge badge-purple">Variable Update</span></div>';
+      const promptVar = 'AgentScriptInternal_agent_instructions';
+      const promptUpdates = updates.filter(u => String(u.variable_name || '') === promptVar);
+      const otherUpdates = updates.filter(u => String(u.variable_name || '') !== promptVar);
+      if (promptUpdates.length) {
+        html += '<div class="fsm-detail-section"><div class="fsm-detail-section-h">Prompt Buffer</div>';
+        for (const u of promptUpdates) {
+          const newVal = u.variable_new_value != null ? String(u.variable_new_value) : '';
+          html += `<div class="fsm-detail-prompt-buf">${esc(newVal || '(empty)')}</div>`;
+          if (u.variable_change_reason) html += `<div class="fsm-kv" style="margin-top:4px;opacity:.75">${esc(String(u.variable_change_reason))}</div>`;
+        }
+        html += '</div>';
+      }
+      if (otherUpdates.length) {
+        html += '<div class="fsm-detail-section"><div class="fsm-detail-section-h">Variables Changed</div>';
+        for (const u of otherUpdates) {
+          const name = String(u.variable_name || '');
+          html += '<div class="fsm-detail-var">';
+          html += `<div class="fsm-detail-var-name">${esc(name)}</div>`;
+          html += `<div class="fsm-detail-var-val old">${esc(truncateJSON(u.variable_past_value, 200))}</div>`;
+          html += `<div class="fsm-detail-var-val">\u2192 ${esc(truncateJSON(u.variable_new_value, 200))}</div>`;
+          if (u.variable_change_reason) html += `<div class="fsm-kv" style="margin-top:3px;opacity:.75">${esc(String(u.variable_change_reason))}</div>`;
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+      return html;
+    }
+    case 'action': {
+      let html = '<div class="fsm-detail-h">Sub Agent Setup <span class="fsm-detail-badge badge-purple">Actions Processed</span></div>';
+      const names = d.action_names || [];
+      if (names.length) {
+        html += '<div class="fsm-detail-section"><div class="fsm-detail-section-h">Actions</div>';
+        html += names.map(n => `<div class="fsm-kv">${esc(String(n))}</div>`).join('');
+        html += '</div>';
+      } else html += '<div class="fsm-kv">\u2014</div>';
+      return html;
+    }
+    case 'enabled': {
+      let html = '<div class="fsm-detail-h">Sub Agent Setup <span class="fsm-detail-badge badge-purple">Enabled Tools</span></div>';
+      const tools = d.enabled_tools || [];
+      html += `<div class="fsm-chips" style="margin-top:6px">${tools.map(x => `<span class="fsm-chip">${esc(String(x))}</span>`).join(' ') || '\u2014'}</div>`;
+      return html;
+    }
+    case 'entry': {
+      let html = '<div class="fsm-detail-h">Sub Agent Setup <span class="fsm-detail-badge badge-blue">Node Entry</span></div>';
+      const sv = d.state_variables;
+      if (sv && typeof sv === 'object') {
+        const keys = Object.keys(sv);
+        html += `<div class="fsm-detail-section"><div class="fsm-detail-section-h">${keys.length} State Variables on Entry</div>`;
+        const promptVal = sv['AgentScriptInternal_agent_instructions'];
+        if (promptVal != null && String(promptVal).trim()) {
+          html += '<div class="fsm-detail-section-h" style="margin-top:8px">Current Prompt Buffer</div>';
+          html += `<div class="fsm-detail-prompt-buf">${esc(String(promptVal))}</div>`;
+        }
+        const display = keys.filter(k => !k.startsWith('__') && !k.startsWith('AgentScriptInternal_')).slice(0, 20);
+        if (display.length) {
+          html += '<div class="fsm-detail-section-h" style="margin-top:8px">Key Variables</div>';
+          for (const k of display) {
+            html += `<div class="fsm-detail-var"><div class="fsm-detail-var-name">${esc(k)}</div><div class="fsm-detail-var-val">${esc(truncateJSON(sv[k], 200))}</div></div>`;
+          }
+        }
+        html += '</div>';
+      } else html += '<div class="fsm-kv">(no state variables)</div>';
+      return html;
+    }
+    case 'llm_sent': {
+      const lat = d.execution_latency != null ? `${esc(String(d.execution_latency))} ms` : '';
+      const parts = [d.agent_name && esc(String(d.agent_name)), d.prompt_name && esc(String(d.prompt_name)), lat].filter(Boolean);
+      let html = '<div class="fsm-detail-h">LLM Request <span class="fsm-detail-badge badge-blue">LLM</span></div>';
+      if (parts.length) html += `<div class="fsm-detail-meta">${parts.join(' \u00b7 ')}</div>`;
+      html += formatFsmLlmStepBody(step);
+      return html;
+    }
+    case 'execute': {
+      const fn = step.function || {};
+      const fnName = fn.name != null ? String(fn.name) : 'Function';
+      const lat = step.executionLatency != null ? `${step.executionLatency} ms` : '';
+      let html = `<div class="fsm-detail-h">Tool Execution <span class="fsm-detail-badge badge-teal">${esc(fnName)}</span>${lat ? ` <span class="fsm-detail-badge">${esc(lat)}</span>` : ''}</div>`;
+      html += '<div class="fsm-detail-exec">';
+      html += '<div class="fsm-detail-section-h">Input</div>';
+      html += `<pre>${esc(prettyJSON(fn.input, 1500))}</pre>`;
+      html += '<div class="fsm-detail-section-h" style="margin-top:8px">Output</div>';
+      html += `<pre>${esc(prettyJSON(fn.output, 2000))}</pre>`;
+      html += '</div>';
+      return html;
+    }
+    case 'response': {
+      if (step.type === 'PlannerResponseStep') {
+        const msg = step.message || '';
+        const rType = step.responseType || '';
+        const safe = step.isContentSafe;
+        let html = '<div class="fsm-detail-h">Agent Response <span class="fsm-detail-badge badge-green">Response</span>';
+        if (rType) html += ` <span class="fsm-detail-badge">${esc(rType)}</span>`;
+        if (safe != null) html += ` <span class="fsm-detail-badge ${safe ? 'badge-green' : 'badge-orange'}">${safe ? 'Safe' : 'Unsafe'}</span>`;
+        html += '</div>';
+        html += `<div class="fsm-detail-response">${esc(msg)}</div>`;
+        return html;
+      }
+      if (step.type === 'ReasoningStep') {
+        const cat = step.category || '';
+        const reason = step.reason || '';
+        let html = '<div class="fsm-detail-h">Grounding Check <span class="fsm-detail-badge badge-orange">Reasoning</span>';
+        if (cat) html += ` <span class="fsm-detail-badge">${esc(cat)}</span>`;
+        html += '</div>';
+        html += `<div class="fsm-detail-reason">${esc(reason)}</div>`;
+        return html;
+      }
+      return `<div class="fsm-detail-h">Response</div><div class="fsm-kv">${esc(truncateJSON(d, 300))}</div>`;
+    }
+    case 'user': {
+      let html = '<div class="fsm-detail-h">User Input <span class="fsm-detail-badge badge-yellow">User</span></div>';
+      html += `<div class="fsm-detail-response" style="border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)">${esc(step.message || '')}</div>`;
+      return html;
+    }
+    case 'transition': {
+      let html = '<div class="fsm-detail-h">Sub Agent Handoff <span class="fsm-detail-badge badge-orange">Transition</span></div>';
+      html += `<div class="fsm-kv">To: <strong>${esc(String(d.to_agent || ''))}</strong></div>`;
+      html += `<div class="fsm-kv">${esc(String(d.transition_type || ''))} \u00b7 ${esc(String(d.transition_mode || ''))}</div>`;
+      if (d.from_agent) html += `<div class="fsm-kv">From: ${esc(String(d.from_agent))}</div>`;
+      return html;
+    }
+    default:
+      return '';
+  }
+}
+
+function makeTimelineEvent(stepIndex, t, macro, kind, title, subtitle) {
+  return { stepIndex, t, macro, kind, title, subtitle };
+}
+
+function buildRawTopicTimeline(plan, topicId, stepTopicMap) {
+  const events = [];
+  if (!plan || !topicId) return events;
+  for (let i = 0; i < plan.length; i++) {
+    const topic = stepTopicMap ? stepTopicMap[i] : 'none';
+    if (topic !== topicId) continue;
+    const step = plan[i];
+    const d = step.data || {};
+    const t = step.startExecutionTime || 0;
+
+    if (step.type === 'TransitionStep') {
+      const toAgent = d.to_agent ? String(d.to_agent).trim() : '';
+      events.push(makeTimelineEvent(i, t, toAgent ? handoffMacroId(toAgent) : null, 'transition',
+        toAgent ? `Handoff \u2192 ${toAgent}` : 'Handoff (leaving sub agent)', withStepDuration('', step)));
+      continue;
+    }
+    if (step.type === 'UserInputStep') {
+      events.push(makeTimelineEvent(i, t, 'UserInput', 'user', 'User input', withStepDuration('', step)));
+    }
+    if (step.type === 'NodeEntryStateStep') {
+      const sub = d.directive_context ? esc(String(d.directive_context)) : '';
+      events.push(makeTimelineEvent(i, t, 'Entry', 'entry', 'Node entry', withStepDuration(sub, step)));
+    }
+    if (step.type === 'VariableUpdateStep') {
+      events.push(makeTimelineEvent(i, t, 'Prep', 'variable', 'Variable update', withStepDuration('', step)));
+    }
+    if (step.type === 'BeforeReasoningIterationStep') {
+      events.push(makeTimelineEvent(i, t, 'Prep', 'action', 'Prep \u00b7 actions processed', withStepDuration('', step)));
+    }
+    if (step.type === 'EnabledToolsStep') {
+      events.push(makeTimelineEvent(i, t, 'Prep', 'enabled', 'Tools enabled for agent', withStepDuration('', step)));
+    }
+    if (step.type === 'LLMStep') {
+      const lat = d.execution_latency != null ? `${esc(String(d.execution_latency))} ms` : '';
+      const subParts = [d.agent_name && esc(String(d.agent_name)), d.prompt_name && esc(String(d.prompt_name)), lat].filter(Boolean);
+      events.push(makeTimelineEvent(i, t, 'LLM', 'llm_sent', 'LLM call', withStepDuration(subParts.join(' \u00b7 '), step)));
+    }
+    if (step.type === 'FunctionStep') {
+      const fn = step.function || {};
+      const macroId = functionStepMacroId(step);
+      const latSub = step.executionLatency != null ? `${esc(String(step.executionLatency))} ms` : '';
+      events.push(makeTimelineEvent(i, t, macroId, 'execute', 'Tool executed', withStepDuration(latSub, step)));
+    }
+    if (step.type === 'PlannerResponseStep' || step.type === 'ReasoningStep') {
+      events.push(makeTimelineEvent(i, t, 'Response', 'response',
+        step.type === 'PlannerResponseStep' ? 'Planner response' : 'Reasoning', withStepDuration('', step)));
+    }
+  }
+  return events;
+}
+
+
+function parsePlan(plan) {
+  const displayNames = Object.create(null);
+  const topicSet = new Set();
+  const edgeMap = new Map();
+  const fsmSequences = Object.create(null);
+  const topicDetails = Object.create(null);
+  const stepTopicMap = new Array(plan.length);
+
+  let prevAgent = 'none';
+  for (let i = 0; i < plan.length; i++) {
+    const step = plan[i];
+    const d = step.data || {};
+
+    if (step.type === 'TransitionStep') {
+      recordDisplay(displayNames, agentKey(d.from_agent), d.from_agent);
+      recordDisplay(displayNames, agentKey(d.to_agent), d.to_agent);
+      const from = agentKey(d.from_agent);
+      const to = agentKey(d.to_agent);
+      if (from !== 'none' && d.current_state && typeof d.current_state === 'object') {
+        const td = ensureTopicDetails(topicDetails, from);
+        if (td) for (const k of Object.keys(d.current_state)) td.variableNames.add(k);
+      }
+      if (from !== 'none' && to !== 'none') {
+        topicSet.add(from);
+        topicSet.add(to);
+        const key = from + '\0' + to;
+        const dur = (step.endExecutionTime - step.startExecutionTime) || 0;
+        if (!edgeMap.has(key)) edgeMap.set(key, { from, to, count: 0, weight: 0 });
+        const e = edgeMap.get(key);
+        e.count++;
+        e.weight += dur;
+      }
+    }
+    if (step.type === 'NodeEntryStateStep') {
+      recordDisplay(displayNames, agentKey(d.agent_name), d.agent_name);
+      const nk = agentKey(d.agent_name);
+      if (nk !== 'none' && d.state_variables && typeof d.state_variables === 'object') {
+        const td = ensureTopicDetails(topicDetails, nk);
+        if (td) for (const k of Object.keys(d.state_variables)) td.variableNames.add(k);
+      }
+    }
+    if (step.type === 'LLMStep' || step.type === 'EnabledToolsStep') recordDisplay(displayNames, agentKey(d.agent_name), d.agent_name);
+
+    const topic = getAgentForStep(step, prevAgent);
+    stepTopicMap[i] = topic;
+
+    if (step.type === 'VariableUpdateStep') {
+      const td = ensureTopicDetails(topicDetails, topic);
+      if (td) {
+        const updates = d.variable_updates || [];
+        for (const u of updates) {
+          if (u.variable_name) td.variableNames.add(String(u.variable_name));
+          td.variableUpdates.push({
+            stepIndex: i,
+            name: u.variable_name,
+            past: u.variable_past_value,
+            new: u.variable_new_value,
+            reason: u.variable_change_reason,
+            directive: u.directive_context,
+          });
+        }
+      }
+    }
+
+    if (step.type === 'BeforeReasoningIterationStep') {
+      const td = ensureTopicDetails(topicDetails, topic);
+      if (td) for (const a of d.action_names || []) td.beforeReasoningActions.add(String(a));
+    }
+
+    if (step.type === 'EnabledToolsStep') {
+      const td = ensureTopicDetails(topicDetails, topic);
+      if (td) for (const x of d.enabled_tools || []) td.enabledTools.add(String(x));
+    }
+
+    if (step.type === 'LLMStep') {
+      const td = ensureTopicDetails(topicDetails, topic);
+      if (td) {
+        if (d.prompt_name) td.promptNames.add(String(d.prompt_name));
+        for (const x of step.tools_sent || []) td.toolsSent.add(String(x));
+        for (const m of step.response_messages || []) {
+          const invocations = extractToolInvocations(m);
+          for (const inv of invocations) {
+            const nm = String(inv.name);
+            td.toolsInvoked.add(nm);
+            td.toolInvocations.push({
+              name: nm,
+              arguments: inv.arguments,
+              stepIndex: i,
+            });
+          }
+        }
+      }
+    }
+
+    if (step.type === 'FunctionStep') {
+      const fn = step.function;
+      const td = ensureTopicDetails(topicDetails, topic);
+      if (td && fn && fn.name) {
+        const nm = String(fn.name);
+        td.toolsExecuted.add(nm);
+        td.functionsExecuted.push({
+          name: nm,
+          input: fn.input,
+          output: fn.output,
+          latency: step.executionLatency,
+          start: step.startExecutionTime,
+          stepIndex: i,
+        });
+      }
+    }
+
+    prevAgent = topic;
+
+    if (topic !== 'none') topicSet.add(topic);
+
+    const macro = stepToMacro(step);
+    if (macro && topic !== 'none') {
+      if (!fsmSequences[topic]) fsmSequences[topic] = [];
+      fsmSequences[topic].push(macro);
+    }
+  }
+
+  const fsmEdges = Object.create(null);
+  for (const topic of Object.keys(fsmSequences)) {
+    const seq = fsmSequences[topic];
+    const trans = new Map();
+    for (let j = 1; j < seq.length; j++) {
+      const a = seq[j - 1];
+      const b = seq[j];
+      const k = a + '\0' + b;
+      trans.set(k, (trans.get(k) || 0) + 1);
+    }
+    fsmEdges[topic] = trans;
+  }
+
+  topicSet.delete('none');
+
+  return {
+    displayNames,
+    topics: [...topicSet],
+    transitionEdges: [...edgeMap.values()],
+    fsmSequences,
+    fsmEdges,
+    topicDetails,
+    stepTopicMap,
+  };
+}
+
+function buildSimpleDigraph(topics, transitionEdges) {
+  const topicSet = new Set(topics);
+  const adj = Object.create(null);
+  const adjR = Object.create(null);
+  for (const t of topics) {
+    adj[t] = [];
+    adjR[t] = [];
+  }
+  const edgeSet = new Set();
+  for (const e of transitionEdges) {
+    if (!topicSet.has(e.from) || !topicSet.has(e.to)) continue;
+    const key = e.from + '->' + e.to;
+    if (!edgeSet.has(key)) {
+      edgeSet.add(key);
+      adj[e.from].push(e.to);
+      adjR[e.to].push(e.from);
+    }
+  }
+  return { adj, adjR, mUnique: edgeSet.size };
+}
+
+function kosarajuSCC(topics, adj, adjR) {
+  const visited = Object.create(null);
+  const order = [];
+  for (const start of topics) {
+    if (visited[start]) continue;
+    const stack = [{ v: start, i: 0 }];
+    visited[start] = true;
+    while (stack.length) {
+      const frame = stack[stack.length - 1];
+      const neighbors = adj[frame.v] || [];
+      if (frame.i < neighbors.length) {
+        const w = neighbors[frame.i++];
+        if (!visited[w]) { visited[w] = true; stack.push({ v: w, i: 0 }); }
+      } else { order.push(frame.v); stack.pop(); }
+    }
+  }
+
+  const comp = Object.create(null);
+  let cid = 0;
+  for (let i = order.length - 1; i >= 0; i--) {
+    const start = order[i];
+    if (comp[start] !== undefined) continue;
+    const stack = [{ v: start, i: 0 }];
+    comp[start] = cid;
+    while (stack.length) {
+      const frame = stack[stack.length - 1];
+      const neighbors = adjR[frame.v] || [];
+      if (frame.i < neighbors.length) {
+        const w = neighbors[frame.i++];
+        if (comp[w] === undefined) { comp[w] = cid; stack.push({ v: w, i: 0 }); }
+      } else { stack.pop(); }
+    }
+    cid++;
+  }
+  const groups = [];
+  for (let i = 0; i < cid; i++) groups.push([]);
+  for (const v of topics) groups[comp[v]].push(v);
+  return { comp, groups, count: cid };
+}
+
+function buildUndirectedAdj(topics, adj) {
+  const und = Object.create(null);
+  for (const t of topics) und[t] = [];
+  const seen = Object.create(null);
+  for (const u of topics) {
+    for (const v of adj[u] || []) {
+      const fwd = u + '\0' + v;
+      const rev = v + '\0' + u;
+      if (!seen[fwd]) { seen[fwd] = true; und[u].push(v); }
+      if (!seen[rev]) { seen[rev] = true; und[v].push(u); }
+    }
+  }
+  return und;
+}
+
+function weaklyConnectedComponents(topics, und) {
+  const seen = Object.create(null);
+  const comps = [];
+  for (const start of topics) {
+    if (seen[start]) continue;
+    const stack = [start];
+    const cur = [];
+    seen[start] = true;
+    while (stack.length) {
+      const u = stack.pop();
+      cur.push(u);
+      for (const v of und[u] || []) {
+        if (!seen[v]) {
+          seen[v] = true;
+          stack.push(v);
+        }
+      }
+    }
+    comps.push(cur);
+  }
+  return comps;
+}
+
+function bfsDistancesUndirected(start, und) {
+  const dist = Object.create(null);
+  const q = [start];
+  dist[start] = 0;
+  for (let qi = 0; qi < q.length; qi++) {
+    const u = q[qi];
+    for (const v of und[u] || []) {
+      if (dist[v] === undefined) {
+        dist[v] = dist[u] + 1;
+        q.push(v);
+      }
+    }
+  }
+  return dist;
+}
+
+function undirectedDiameter(topics, und) {
+  if (topics.length <= 1) return 0;
+  let diam = 0;
+  for (const s of topics) {
+    const d = bfsDistancesUndirected(s, und);
+    for (const t of topics) {
+      if (d[t] !== undefined && d[t] > diam) diam = d[t];
+    }
+  }
+  return diam;
+}
+
+function brandesBetweennessUndirected(topics, und) {
+  const C = Object.create(null);
+  for (const v of topics) C[v] = 0;
+
+  for (const s of topics) {
+    const S = [];
+    const P = Object.create(null);
+    const sigma = Object.create(null);
+    const d = Object.create(null);
+    for (const v of topics) {
+      P[v] = [];
+      sigma[v] = 0;
+      d[v] = -1;
+    }
+    sigma[s] = 1;
+    d[s] = 0;
+    const Q = [s];
+    for (let qi = 0; qi < Q.length; qi++) {
+      const v = Q[qi];
+      S.push(v);
+      for (const w of und[v]) {
+        if (d[w] < 0) {
+          Q.push(w);
+          d[w] = d[v] + 1;
+        }
+        if (d[w] === d[v] + 1) {
+          P[w].push(v);
+          sigma[w] += sigma[v];
+        }
+      }
+    }
+    const delta = Object.create(null);
+    for (const v of topics) delta[v] = 0;
+    while (S.length) {
+      const w = S.pop();
+      for (const v of P[w]) delta[v] += sigma[v] / sigma[w] * (1 + delta[w]);
+      if (w !== s) C[w] += delta[w];
+    }
+  }
+  for (const v of topics) C[v] /= 2;
+  return C;
+}
+
+function analyzeGraph(parsed) {
+  const { topics, transitionEdges } = parsed;
+  const n = topics.length;
+  const mMulti = transitionEdges.reduce((s, e) => s + e.count, 0);
+  const { adj, adjR, mUnique } = buildSimpleDigraph(topics, transitionEdges);
+  const density = n > 1 ? mUnique / (n * (n - 1)) : 0;
+
+  const indeg = Object.create(null);
+  const outdeg = Object.create(null);
+  for (const t of topics) {
+    indeg[t] = 0;
+    outdeg[t] = adj[t].length;
+  }
+  for (const u of topics) for (const v of adj[u]) indeg[v]++;
+
+  const scc = kosarajuSCC(topics, adj, adjR);
+  const und = buildUndirectedAdj(topics, adj);
+  const wcc = weaklyConnectedComponents(topics, und);
+  const nontrivialScc = scc.groups.filter(g => g.length > 1);
+  const selfLoops = transitionEdges.filter(e => e.from === e.to && e.count > 0);
+
+  const diam = n > 0 ? undirectedDiameter(topics, und) : 0;
+  const between = n > 0 && n <= 40 ? brandesBetweennessUndirected(topics, und) : null;
+
+  let maxBt = null;
+  let maxBtVal = -1;
+  if (between) {
+    for (const t of topics) {
+      if (between[t] > maxBtVal) {
+        maxBtVal = between[t];
+        maxBt = t;
+      }
+    }
+  }
+
+  const treeLower = wcc.length === 1 && n > 0 ? n - 1 : null;
+  const redundancy = mMulti - mUnique;
+
+  let prose = [];
+  if (wcc.length > 1) {
+    prose.push(`This trace spans <strong>${wcc.length}</strong> weakly connected sub agent islands — handoffs do not connect all sub agents in one component.`);
+  } else if (n > 0) {
+    prose.push('All sub agents sit in one weakly connected component.');
+  }
+  if (nontrivialScc.length > 0) {
+    prose.push(`Strongly connected components with 2+ sub agents: <strong>${nontrivialScc.length}</strong> — routing may form directed cycles (revisit sub agents).`);
+  } else if (n > 0 && mUnique > 0) {
+    prose.push('Sub agent digraph is acyclic at the simple-edge level (DAG-like); flow is easier to follow.');
+  }
+  if (treeLower != null && mUnique > treeLower) {
+    prose.push(`Unique transition arcs (<strong>${mUnique}</strong>) exceed the tree lower bound (<strong>${treeLower}</strong>) for a connected graph — extra paths or repeated topology.`);
+  }
+  if (redundancy > 0) {
+    prose.push(`<strong>${redundancy}</strong> repeated handoff(s) on the same arc (multiplicity &gt; 1).`);
+  }
+  if (maxBt && maxBtVal > 0) {
+    prose.push(`Highest betweenness (undirected): <strong>${esc(parsed.displayNames[maxBt] || maxBt)}</strong> — potential orchestration bottleneck.`);
+  }
+
+  return {
+    n,
+    mMulti,
+    mUnique,
+    density,
+    indeg,
+    outdeg,
+    scc,
+    wcc,
+    nontrivialScc,
+    selfLoops,
+    diam,
+    between,
+    maxBt,
+    maxBtVal,
+    treeLower,
+    redundancy,
+    prose,
+  };
+}
+
+function renderMetrics(parsed, a) {
+  const plan = currentData && currentData.plan;
+  const st = computePlanExecutionStats(plan || []);
+  const el = document.getElementById('metricsCard');
+  el.classList.remove('hidden');
+  el.innerHTML = `<span class="exec-stats-strip">
+    <span><b>${st.steps}</b> steps</span>
+    <span><b>${st.llm}</b> LLM</span>
+    <span><b>${st.fn}</b> functions</span>
+    <span><b>${st.transition}</b> transitions</span>
+    <span>Wall <b>${st.wall}ms</b></span>
+    <span><b>${a.n}</b> sub agents</span>
+    <span>Density <b>${a.density.toFixed(3)}</b></span>
+  </span><button class="btn" id="btnGraphAnalysis" style="margin-left:auto;font-size:11px;padding:4px 10px">Graph Analysis ↗</button>`;
+  document.getElementById('btnGraphAnalysis').addEventListener('click', () => openGraphAnalysisPdf(parsed, a, st));
+}
+
+function openGraphAnalysisPdf(parsed, a, st) {
+  const dn = id => esc(parsed.displayNames[id] || id);
+
+  const degRows = parsed.topics.map(t =>
+    `<tr><td>${dn(t)}</td><td style="text-align:right">${a.indeg[t]}</td><td style="text-align:right">${a.outdeg[t]}</td><td style="text-align:right">${a.indeg[t] + a.outdeg[t]}</td></tr>`
+  ).join('');
+
+  const btRows = a.between
+    ? parsed.topics
+        .map(t => ({ t, b: a.between[t] }))
+        .sort((x, y) => y.b - x.b)
+        .map(({ t, b }) => `<tr><td>${dn(t)}</td><td style="text-align:right">${b.toFixed(4)}</td></tr>`)
+        .join('')
+    : '<tr><td colspan="2">Skipped — graph exceeds 40 nodes</td></tr>';
+
+  const sccGroups = a.scc.groups
+    .filter(g => g.length > 1)
+    .map((g, i) => `<tr><td>SCC ${i + 1}</td><td>${g.map(id => dn(id)).join(', ')}</td><td style="text-align:right">${g.length}</td></tr>`)
+    .join('') || '<tr><td colspan="3">None — the graph is acyclic (DAG)</td></tr>';
+
+  const wccGroups = a.wcc.map((g, i) =>
+    `<tr><td>Component ${i + 1}</td><td>${g.map(id => dn(id)).join(', ')}</td><td style="text-align:right">${g.length}</td></tr>`
+  ).join('');
+
+  const selfLoopRows = a.selfLoops.length
+    ? a.selfLoops.map(e => `<tr><td>${dn(e.from)}</td><td style="text-align:right">${e.count}</td></tr>`).join('')
+    : '<tr><td colspan="2">None</td></tr>';
+
+  const edgeRows = [...parsed.transitionEdges]
+    .sort((x, y) => y.count - x.count)
+    .map(e => `<tr><td>${dn(e.from)}</td><td>${dn(e.to)}</td><td style="text-align:right">${e.count}</td></tr>`)
+    .join('');
+
+  const proseHtml = a.prose.map(p => `<p>${p}</p>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Graph Analysis — AgentLens</title>
+<style>
+@media print { @page { margin: 1.5cm 2cm; size: A4; } }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 860px; margin: 0 auto; padding: 40px 32px; color: #1e2030; line-height: 1.6; }
+h1 { font-size: 22px; margin-bottom: 4px; }
+h2 { font-size: 16px; margin-top: 32px; margin-bottom: 8px; border-bottom: 2px solid #e2e4ed; padding-bottom: 6px; color: #2563eb; }
+h3 { font-size: 13px; margin-top: 20px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7084; }
+p { margin: 6px 0; }
+.subtitle { font-size: 13px; color: #6b7084; margin-bottom: 24px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin: 12px 0 20px; }
+.metric-box { background: #f5f6fa; border: 1px solid #d4d7e3; border-radius: 8px; padding: 12px 14px; }
+.metric-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7084; margin-bottom: 4px; }
+.metric-box .value { font-size: 20px; font-weight: 700; color: #2563eb; font-family: 'SF Mono', Consolas, monospace; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 13px; }
+th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #d4d7e3; color: #6b7084; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+td { padding: 6px 10px; border-bottom: 1px solid #e2e4ed; }
+tr:hover td { background: rgba(37, 99, 235, 0.04); }
+.algo-section { background: #f8f9fc; border: 1px solid #e2e4ed; border-radius: 8px; padding: 16px 18px; margin: 12px 0; }
+.algo-section h4 { font-size: 13px; font-weight: 700; margin: 0 0 6px; color: #1e2030; }
+.algo-section p { font-size: 12px; color: #3a3f54; margin: 4px 0; }
+.algo-section code { font-family: 'SF Mono', Consolas, monospace; font-size: 11px; background: #e8eaf0; padding: 1px 5px; border-radius: 3px; }
+.interpretation { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 18px; margin: 16px 0; }
+.interpretation p { font-size: 13px; color: #1e40af; margin: 4px 0; }
+.print-note { font-size: 11px; color: #6b7084; margin-top: 32px; border-top: 1px solid #e2e4ed; padding-top: 12px; }
+</style>
+</head><body>
+<h1>Agent Graph Analysis</h1>
+<p class="subtitle">Generated by AgentLens · ${new Date().toLocaleString()}</p>
+
+<h2>1. Execution Summary</h2>
+<div class="metrics-grid">
+  <div class="metric-box"><div class="label">Total Steps</div><div class="value">${st.steps}</div></div>
+  <div class="metric-box"><div class="label">LLM Calls</div><div class="value">${st.llm}</div></div>
+  <div class="metric-box"><div class="label">Function Calls</div><div class="value">${st.fn}</div></div>
+  <div class="metric-box"><div class="label">Transitions</div><div class="value">${st.transition}</div></div>
+  <div class="metric-box"><div class="label">Wall Time</div><div class="value">${st.wall}ms</div></div>
+  <div class="metric-box"><div class="label">Sub Agents</div><div class="value">${a.n}</div></div>
+</div>
+
+<h2>2. Graph Structure</h2>
+<div class="metrics-grid">
+  <div class="metric-box"><div class="label">Vertices |V|</div><div class="value">${a.n}</div></div>
+  <div class="metric-box"><div class="label">Edges (multigraph)</div><div class="value">${a.mMulti}</div></div>
+  <div class="metric-box"><div class="label">Edges (simple)</div><div class="value">${a.mUnique}</div></div>
+  <div class="metric-box"><div class="label">Density</div><div class="value">${a.density.toFixed(4)}</div></div>
+  <div class="metric-box"><div class="label">Undirected Diameter</div><div class="value">${a.diam}</div></div>
+  <div class="metric-box"><div class="label">Weakly Connected Components</div><div class="value">${a.wcc.length}</div></div>
+  <div class="metric-box"><div class="label">Strongly Connected Components</div><div class="value">${a.scc.count}</div></div>
+  <div class="metric-box"><div class="label">Redundant Edges</div><div class="value">${a.redundancy}</div></div>
+</div>
+
+<div class="interpretation">${proseHtml}</div>
+
+<h2>3. Degree Analysis</h2>
+<p>In-degree is the number of distinct sub agents that hand off <em>to</em> a given agent. Out-degree is the number of distinct agents it hands off <em>to</em>. High total degree indicates a hub agent.</p>
+<table>
+  <thead><tr><th>Sub Agent</th><th style="text-align:right">In-degree</th><th style="text-align:right">Out-degree</th><th style="text-align:right">Total</th></tr></thead>
+  <tbody>${degRows}</tbody>
+</table>
+<div class="algo-section">
+  <h4>How degrees are computed</h4>
+  <p>The agent graph is modeled as a directed multigraph <code>G = (V, E)</code> where each vertex is a sub agent and each edge is a <code>TransitionStep</code> handoff. For degree analysis, parallel edges are collapsed into a simple digraph (each pair counted once). In-degree <code>deg⁻(v) = |{u : (u,v) ∈ E}|</code> and out-degree <code>deg⁺(v) = |{w : (v,w) ∈ E}|</code>.</p>
+</div>
+
+<h2>4. Transition Edges</h2>
+<p>Every handoff between sub agents, sorted by frequency. Count &gt; 1 means the same pair was traversed multiple times during the trace.</p>
+<table>
+  <thead><tr><th>From</th><th>To</th><th style="text-align:right">Count</th></tr></thead>
+  <tbody>${edgeRows}</tbody>
+</table>
+
+<h2>5. Self-Loops</h2>
+<p>A self-loop means a sub agent handed off to itself. This can indicate retry logic or iterative processing within a single agent.</p>
+<table>
+  <thead><tr><th>Sub Agent</th><th style="text-align:right">Count</th></tr></thead>
+  <tbody>${selfLoopRows}</tbody>
+</table>
+
+<h2>6. Weakly Connected Components</h2>
+<p>Weakly connected components (WCC) treat all edges as undirected. If WCC &gt; 1, some sub agents are completely disconnected — they were never linked by any handoff chain.</p>
+<table>
+  <thead><tr><th>Component</th><th>Members</th><th style="text-align:right">Size</th></tr></thead>
+  <tbody>${wccGroups}</tbody>
+</table>
+<div class="algo-section">
+  <h4>Algorithm: BFS / Union-Find</h4>
+  <p>Build an undirected adjacency list from all directed edges. Run BFS from each unvisited vertex, assigning all reachable vertices to the same component. Time complexity: <code>O(|V| + |E|)</code>.</p>
+</div>
+
+<h2>7. Strongly Connected Components</h2>
+<p>An SCC is a maximal set of vertices where every vertex is reachable from every other via directed edges. Non-trivial SCCs (size ≥ 2) indicate directed cycles — the agent can revisit sub agents in a loop.</p>
+<table>
+  <thead><tr><th>SCC</th><th>Members</th><th style="text-align:right">Size</th></tr></thead>
+  <tbody>${sccGroups}</tbody>
+</table>
+<div class="algo-section">
+  <h4>Algorithm: Kosaraju's Two-Pass</h4>
+  <p><strong>Pass 1:</strong> Run DFS on the original graph <code>G</code>, pushing vertices onto a stack in post-order (finish time).</p>
+  <p><strong>Pass 2:</strong> Pop vertices from the stack. For each unvisited vertex, run DFS on the <em>transpose graph</em> <code>Gᵀ</code> (all edges reversed). Each DFS tree in pass 2 is one SCC.</p>
+  <p><strong>Why it works:</strong> The post-order from pass 1 ensures that in pass 2, DFS from a vertex in a "sink" SCC of the DAG of SCCs cannot escape into other components. The transpose reverses reachability, so only vertices mutually reachable (i.e., in the same SCC) are visited together.</p>
+  <p>Time complexity: <code>O(|V| + |E|)</code>. Space: <code>O(|V|)</code> for the stack and component labels.</p>
+</div>
+
+<h2>8. Betweenness Centrality</h2>
+<p>Betweenness centrality measures how often a sub agent lies on the shortest path between all other pairs. A high score indicates a potential orchestration bottleneck — if that agent fails or slows down, many handoff paths are affected.</p>
+${a.maxBt ? `<p><strong>Highest betweenness:</strong> ${dn(a.maxBt)} (${a.maxBtVal.toFixed(4)})</p>` : ''}
+<table>
+  <thead><tr><th>Sub Agent</th><th style="text-align:right">Betweenness</th></tr></thead>
+  <tbody>${btRows}</tbody>
+</table>
+<div class="algo-section">
+  <h4>Algorithm: Brandes' Algorithm (undirected)</h4>
+  <p>For each source vertex <code>s</code>:</p>
+  <p>1. Run BFS from <code>s</code> to compute shortest-path distances <code>d(s,v)</code> and path counts <code>σ(s,v)</code>.</p>
+  <p>2. Process vertices in reverse BFS order (farthest first). For each vertex <code>w</code>, accumulate pair-dependencies: <code>δ(s,v) += (σ(s,v)/σ(s,w)) · (1 + δ(s,w))</code> for each predecessor <code>v</code> of <code>w</code>.</p>
+  <p>3. Add <code>δ(s,v)</code> to the centrality score <code>C(v)</code> for all <code>v ≠ s</code>.</p>
+  <p>After all sources, divide by 2 (undirected correction). The formula counts each shortest path pair <code>(s,t)</code> once.</p>
+  <p>Time complexity: <code>O(|V| · |E|)</code>. This is efficient for small to medium graphs (≤ 40 vertices).</p>
+  <p><strong>Interpretation:</strong> <code>C(v) = Σ_{s≠v≠t} σ(s,t|v) / σ(s,t)</code> where <code>σ(s,t)</code> is the total number of shortest <code>s–t</code> paths and <code>σ(s,t|v)</code> is the number passing through <code>v</code>.</p>
+</div>
+
+<h2>9. Graph Density</h2>
+<div class="algo-section">
+  <h4>Definition</h4>
+  <p>For a simple directed graph: <code>density = |E| / (|V| × (|V| - 1))</code>.</p>
+  <p>A density of 0 means no edges; 1.0 means every possible directed edge exists (complete graph). Values near 0 suggest a sparse, tree-like handoff structure. Values above 0.5 indicate most sub agents can hand off to most others.</p>
+  <p><strong>This trace:</strong> density = <code>${a.density.toFixed(4)}</code> with <code>${a.mUnique}</code> unique edges out of <code>${a.n > 1 ? a.n * (a.n - 1) : 0}</code> possible.</p>
+</div>
+
+<h2>10. Undirected Diameter</h2>
+<div class="algo-section">
+  <h4>Definition</h4>
+  <p>The diameter is the longest shortest path between any pair of vertices in the undirected version of the graph. It measures the worst-case number of hops needed to get from one sub agent to any other.</p>
+  <p>Computed by running BFS from every vertex and tracking the maximum distance. Time complexity: <code>O(|V| × (|V| + |E|))</code>.</p>
+  <p><strong>This trace:</strong> diameter = <code>${a.diam}</code>${a.diam === 0 ? ' (single agent or fully disconnected)' : a.diam === 1 ? ' (all agents directly connected — star or complete topology)' : ` (up to ${a.diam} hops between the most distant pair)`}.</p>
+</div>
+
+<p class="print-note">Use your browser's Print → Save as PDF to export this report. All analysis is performed locally in the browser with zero external dependencies.</p>
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  if (w) {
+    const revoke = () => URL.revokeObjectURL(url);
+    w.addEventListener('afterprint', revoke, { once: true });
+    w.addEventListener('pagehide', revoke, { once: true });
+  } else {
+    URL.revokeObjectURL(url);
+    showError('Pop-up blocked — please allow pop-ups for this page.');
+  }
+}
+
+
+function refreshFsmTimelineAfterFilterChange() {
+  if (!selectedTopicId || !vizParsed || !currentData) return;
+  readFilterUiToPrefs();
+  saveTimelineFilterPrefs();
+  const plan = currentData.plan;
+  if (!fsmPlayback.rawEvents || fsmPlayback.rawEvents.length === 0) {
+    fsmPlayback.rawEvents = buildRawTopicTimeline(plan, selectedTopicId, vizParsed && vizParsed.stepTopicMap);
+  }
+  fsmPlayback.events = applyTimelineFilters(plan, fsmPlayback.rawEvents, timelineFilterPrefs);
+  const n = fsmPlayback.events.length;
+  if (n === 0) {
+    fsmPlayback.idx = -1;
+    document.getElementById('fsmStepLabel').textContent = '0 / 0';
+    setFsmHighlight(null, null);
+    const ds = document.getElementById('fsmDetailSlot');
+    if (ds) ds.innerHTML = '<div style="padding:18px;font-size:13px;color:var(--text-dim)">No events match the current filters.</div>';
+    syncFsmPlaybar();
+    return;
+  }
+  let idx = Math.min(Math.max(0, fsmPlayback.idx), n - 1);
+  setFsmPlaybackIndex(idx);
+}
+
+
+function svgEl(name, attrs, parent) {
+  const n = document.createElementNS('http://www.w3.org/2000/svg', name);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+
+function layoutRing(ids, cx, cy, R) {
+  const pos = Object.create(null);
+  const n = ids.length;
+  if (n === 0) return pos;
+  if (n === 1) {
+    pos[ids[0]] = { x: cx, y: cy };
+    return pos;
+  }
+  ids.forEach((id, i) => {
+    const ang = -Math.PI / 2 + (2 * Math.PI * i) / n;
+    pos[id] = { x: cx + R * Math.cos(ang), y: cy + R * Math.sin(ang) };
+  });
+  return pos;
+}
+
+function pointToward(ox, oy, tx, ty, radius, gap) {
+  const dx = tx - ox;
+  const dy = ty - oy;
+  const len = Math.hypot(dx, dy) || 1;
+  const r = radius + (gap || 0);
+  return { x: ox + (dx / len) * r, y: oy + (dy / len) * r };
+}
+
+function curvedPath(x1, y1, x2, y2, bend) {
+  if (!bend) return `M ${x1} ${y1} L ${x2} ${y2}`;
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const ox = (-dy / len) * bend;
+  const oy = (dx / len) * bend;
+  return `M ${x1} ${y1} Q ${mx + ox} ${my + oy} ${x2} ${y2}`;
+}
+
+function selfLoopPath(cx, cy, r) {
+  const s = r * 0.75;
+  return `M ${cx + s} ${cy - r * 0.25} A ${r * 1.2} ${r * 1.2} 0 1 1 ${cx - s * 0.85} ${cy - r * 0.15}`;
+}
+
+function clearFsmPanel() {
+  detachFsmKeyboardNav();
+  fsmPlayback.events = [];
+  fsmPlayback.rawEvents = [];
+  fsmPlayback.nodeMap = null;
+  fsmPlayback.edgePathMap = null;
+  fsmPlayback.idx = -1;
+  document.getElementById('fsmTopicLabel').textContent = 'select a sub agent →';
+  document.getElementById('fsmTopicLabel').style.opacity = '.5';
+  document.getElementById('fsmDiagramLabel').textContent = 'select a sub agent';
+  document.getElementById('fsmWrap').innerHTML = '';
+  document.getElementById('inspectorPlaybar').style.display = 'none';
+  document.getElementById('fsmDetailSlot').innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-size:13px">Select a sub agent from the list on the right to begin.</div>';
+}
+
+function renderTopicGraph(parsed) {
+  vizParsed = parsed;
+  const el = document.getElementById('topicGraph');
+  el.innerHTML = '';
+  const VB_W = 760;
+  const VB_H = 480;
+  const cx = VB_W / 2;
+  const cy = VB_H / 2;
+  const topics = parsed.topics;
+  const orbitR = Math.min(VB_W, VB_H) * (0.3 + Math.min(0.06, topics.length * 0.004));
+  const nodeR = Math.max(36, Math.min(44, Math.floor(340 / (topics.length + 2.5))));
+  const pos = layoutRing(topics, cx, cy, topics.length === 1 ? 0 : orbitR);
+
+  const svg = svgEl('svg', { class: 'svg-graph', viewBox: `0 0 ${VB_W} ${VB_H}`, preserveAspectRatio: 'xMidYMid meet' }, el);
+  svg.setAttribute('overflow', 'visible');
+  const defs = svgEl('defs', {}, svg);
+  const m = svgEl('marker', {
+    id: 'topicArrow',
+    markerWidth: '12',
+    markerHeight: '10',
+    refX: '11',
+    refY: '5',
+    orient: 'auto',
+    markerUnits: 'userSpaceOnUse',
+  }, defs);
+  svgEl('path', { d: 'M 0 0.5 L 0 9.5 L 11 5 z', fill: 'var(--text)', opacity: '0.7' }, m);
+
+  const edgeGroup = svgEl('g', { class: 'edges' }, svg);
+  const pairCount = Object.create(null);
+  parsed.transitionEdges.forEach(e => {
+    const pk = e.from < e.to ? `${e.from}|${e.to}` : `${e.to}|${e.from}`;
+    pairCount[pk] = (pairCount[pk] || 0) + 1;
+  });
+  const pairIndex = Object.create(null);
+  parsed.transitionEdges.forEach(e => {
+    const p1 = pos[e.from];
+    const p2 = pos[e.to];
+    if (!p1 || !p2) return;
+    const pk = e.from < e.to ? `${e.from}|${e.to}` : `${e.to}|${e.from}`;
+    const total = pairCount[pk] || 1;
+    const idx = pairIndex[pk] || 0;
+    pairIndex[pk] = idx + 1;
+    let bend = 0;
+    if (e.from === e.to) bend = 0;
+    else if (total > 1) bend = (idx - (total - 1) / 2) * 20;
+    let dpath;
+    let lx;
+    let ly;
+    if (e.from === e.to) {
+      dpath = selfLoopPath(p1.x, p1.y, nodeR);
+      lx = p1.x + nodeR * 1.15;
+      ly = p1.y - nodeR * 1.35;
+    } else {
+      const a = pointToward(p1.x, p1.y, p2.x, p2.y, nodeR, 2);
+      const b = pointToward(p2.x, p2.y, p1.x, p1.y, nodeR, 4);
+      dpath = curvedPath(a.x, a.y, b.x, b.y, bend);
+      lx = (a.x + b.x) / 2;
+      ly = (a.y + b.y) / 2;
+      if (bend) {
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        lx = mx + (-dy / len) * bend * 0.45;
+        ly = my + (dx / len) * bend * 0.45;
+      }
+    }
+    const path = svgEl('path', { class: 'edge', d: dpath }, edgeGroup);
+    path.setAttribute('marker-end', 'url(#topicArrow)');
+    const label = e.count > 1 ? String(e.count) : '';
+    if (label) {
+      const t = svgEl('text', { class: 'edge-label', x: String(lx), y: String(ly + 4) }, edgeGroup);
+      t.textContent = '×' + label;
+    }
+    const ti = svgEl('title', {}, path);
+    ti.textContent = `${e.count} handoff(s)`;
+  });
+
+  topics.forEach(id => {
+    const p = pos[id];
+    const g = svgEl('g', { class: 'topic-node' + (id === selectedTopicId ? ' selected' : ''), 'data-topic-id': id }, svg);
+    g.style.cursor = 'pointer';
+    svgEl('circle', { cx: String(p.x), cy: String(p.y), r: String(nodeR) }, g);
+    const raw = parsed.displayNames[id];
+    const pretty = raw || id.replace(/_/g, ' ');
+    const maxChars = Math.max(8, Math.floor(nodeR / 4));
+    const tLines = svgTextLines(pretty, maxChars);
+    const lineH = 14;
+    const totalH = tLines.length * lineH;
+    const startY = p.y - totalH / 2 + lineH * 0.6;
+    const fontSize = tLines.some(l => l.length > maxChars) ? 11 : 12;
+    const textEl = svgEl('text', { x: String(p.x), y: String(startY), style: `font-size:${fontSize}px` }, g);
+    tLines.forEach((line, li) => {
+      const tspan = svgEl('tspan', { x: String(p.x), dy: li === 0 ? '0' : String(lineH) }, textEl);
+      tspan.textContent = line;
+    });
+    const title = svgEl('title', {}, g);
+    title.textContent = `${pretty} (${id})`;
+  });
+
+  svg.addEventListener('click', ev => {
+    if (!vizParsed) return;
+    if (el._zoomPanState && el._zoomPanState.didDrag) return;
+    const hit = ev.target.closest('.topic-node');
+    if (hit && hit.dataset.topicId) {
+      selectTopic(hit.dataset.topicId);
+    }
+  });
+
+  setupSvgZoomPan(el);
+  renderTopicPills(parsed);
+}
+
+function selectTopic(topicId, startAtEnd) {
+  selectedTopicId = topicId;
+  const svg = document.getElementById('topicGraph').querySelector('svg');
+  if (svg) updateTopicSelection(svg);
+  document.querySelectorAll('.topic-pill').forEach(p => p.classList.toggle('active', p.dataset.topicId === topicId));
+  renderFsm(topicId, vizParsed, startAtEnd);
+}
+
+function renderTopicPills(parsed) {
+  const list = document.getElementById('topicList');
+  list.innerHTML = '';
+  for (const id of parsed.topics) {
+    const pill = document.createElement('button');
+    pill.className = 'topic-pill';
+    pill.dataset.topicId = id;
+    pill.textContent = parsed.displayNames[id] || id.replace(/_/g, ' ');
+    pill.addEventListener('click', () => selectTopic(id));
+    list.appendChild(pill);
+  }
+}
+
+function updateTopicSelection(svg) {
+  svg.querySelectorAll('.topic-node').forEach(g => {
+    g.classList.toggle('selected', g.dataset.topicId === selectedTopicId);
+  });
+}
+
+function syncFsmPlaybar() {
+  const prev = document.getElementById('fsmBtnPrev');
+  const next = document.getElementById('fsmBtnNext');
+  const n = fsmPlayback.events.length;
+  const topicIdx = vizParsed ? vizParsed.topics.indexOf(selectedTopicId) : -1;
+  const hasPrevTopic = topicIdx > 0;
+  const hasNextTopic = vizParsed && topicIdx >= 0 && topicIdx < vizParsed.topics.length - 1;
+  if (prev) prev.disabled = fsmPlayback.idx <= 0 && !hasPrevTopic;
+  if (next) next.disabled = n === 0 || fsmPlayback.idx < 0 || (fsmPlayback.idx >= n - 1 && !hasNextTopic);
+}
+
+function getTransitionTarget(ev) {
+  if (!ev || ev.kind !== 'transition' || ev.stepIndex == null) return null;
+  const step = currentData && currentData.plan && currentData.plan[ev.stepIndex];
+  const toAgent = step && step.data && step.data.to_agent;
+  return toAgent ? agentKey(toAgent) : null;
+}
+
+function navigateToAdjacentTopic(offset) {
+  if (!vizParsed || !selectedTopicId) return false;
+  const idx = vizParsed.topics.indexOf(selectedTopicId);
+  const target = idx + offset;
+  if (target < 0 || target >= vizParsed.topics.length) return false;
+  selectTopic(vizParsed.topics[target], offset < 0);
+  return true;
+}
+
+function stepFsmPrev() {
+  if (fsmPlayback.idx > 0) {
+    setFsmPlaybackIndex(fsmPlayback.idx - 1);
+  } else {
+    navigateToAdjacentTopic(-1);
+  }
+}
+
+function stepFsmNext() {
+  const n = fsmPlayback.events.length;
+  if (fsmPlayback.idx < n - 1) {
+    const target = getTransitionTarget(fsmPlayback.events[fsmPlayback.idx + 1]);
+    if (target) { selectTopic(target); return; }
+    setFsmPlaybackIndex(fsmPlayback.idx + 1);
+  } else if (n > 0) {
+    const target = getTransitionTarget(fsmPlayback.events[fsmPlayback.idx]);
+    if (target) { selectTopic(target); return; }
+    navigateToAdjacentTopic(1);
+  }
+}
+
+function setFsmHighlight(macro, prevMacro) {
+  if (!fsmPlayback.nodeMap) return;
+  for (const id of Object.keys(fsmPlayback.nodeMap)) {
+    const g = fsmPlayback.nodeMap[id];
+    if (!macro) {
+      g.classList.remove('active', 'dim');
+    } else {
+      g.classList.toggle('active', id === macro);
+      g.classList.toggle('dim', id !== macro);
+    }
+  }
+  const eMap = fsmPlayback.edgePathMap;
+  if (!eMap) return;
+  const activeKey = (prevMacro && macro) ? prevMacro + '\0' + macro : null;
+  for (const ek of Object.keys(eMap)) {
+    const pathEl = eMap[ek];
+    if (!macro) {
+      pathEl.classList.remove('active', 'dim');
+    } else {
+      pathEl.classList.toggle('active', ek === activeKey);
+      pathEl.classList.toggle('dim', ek !== activeKey);
+    }
+  }
+}
+
+function sortFsmNodeIds(ids) {
+  const orderRank = id => {
+    const i = FSM_MACRO_RING_ORDER.indexOf(id);
+    return i >= 0 ? i : 1000;
+  };
+  return [...ids].sort((a, b) => {
+    const ra = orderRank(a);
+    const rb = orderRank(b);
+    if (ra !== rb) return ra - rb;
+    return String(a).localeCompare(String(b));
+  });
+}
+
+function isFsmToolMacroId(id) {
+  return !FSM_BUILTIN_MACRO_IDS.has(id) && !isHandoffMacroId(id);
+}
+
+/** 1–2 short lines for node label inside the ring (not for edge keys). */
+function svgTextLines(text, maxChars, sep) {
+  const maxW = maxChars || 13;
+  if (text.length <= maxW) return [text];
+  const s = sep || (text.includes('_') ? '_' : ' ');
+  const parts = text.split(s === '_' ? /_/ : /\s+/);
+  if (parts.length >= 2) {
+    const mid = Math.ceil(parts.length / 2);
+    const line1 = parts.slice(0, mid).join(s);
+    const line2 = parts.slice(mid).join(s);
+    if (line1.length <= maxW + 2 && line2.length <= maxW + 2) return [line1, line2];
+  }
+  return [text.length > maxW ? text.slice(0, maxW - 1) + '…' : text];
+}
+
+function setFsmPlaybackIndex(i) {
+  const n = fsmPlayback.events.length;
+  if (n === 0) return;
+  const idx = Math.max(0, Math.min(n - 1, i));
+  fsmPlayback.idx = idx;
+  const ev = fsmPlayback.events[idx];
+  const prevMacro = idx > 0 ? fsmPlayback.events[idx - 1].macro : null;
+  setFsmHighlight(ev.macro, prevMacro);
+
+  const lbl = document.getElementById('fsmStepLabel');
+  if (lbl) lbl.textContent = `${idx + 1} / ${n}`;
+
+  const detailSlot = document.getElementById('fsmDetailSlot');
+  if (detailSlot) {
+    const plan = currentData && currentData.plan;
+    if (plan && ev.stepIndex != null) {
+      detailSlot.innerHTML = buildFsmDetailHtml(ev, plan[ev.stepIndex]);
+    } else {
+      detailSlot.innerHTML = '';
+    }
+    detailSlot.scrollTop = 0;
+  }
+
+  syncFsmPlaybar();
+}
+
+function setupSvgZoomPan(container) {
+  const svg = container.querySelector('svg');
+  if (!svg) return;
+  const vb = svg.getAttribute('viewBox');
+  if (!vb) return;
+  const parts = vb.split(/\s+/).map(Number);
+  const orig = { x: parts[0], y: parts[1], w: parts[2], h: parts[3] };
+  const state = { x: orig.x, y: orig.y, w: orig.w, h: orig.h, dragging: false, startX: 0, startY: 0, startVBX: 0, startVBY: 0 };
+  const MIN_SCALE = 0.33, MAX_SCALE = 3.0;
+
+  const controls = document.createElement('div');
+  controls.className = 'fsm-zoom-controls';
+  const btnIn = document.createElement('button');
+  btnIn.className = 'fsm-zoom-btn';
+  btnIn.textContent = '+';
+  btnIn.title = 'Zoom in';
+  const btnOut = document.createElement('button');
+  btnOut.className = 'fsm-zoom-btn';
+  btnOut.textContent = '\u2212';
+  btnOut.title = 'Zoom out';
+  const btnReset = document.createElement('button');
+  btnReset.className = 'fsm-zoom-btn';
+  btnReset.textContent = '\u21ba';
+  btnReset.title = 'Reset zoom';
+  const levelSpan = document.createElement('span');
+  levelSpan.className = 'fsm-zoom-level';
+  controls.appendChild(btnIn);
+  controls.appendChild(btnOut);
+  controls.appendChild(btnReset);
+  controls.appendChild(levelSpan);
+  container.appendChild(controls);
+
+  function applyVB() {
+    svg.setAttribute('viewBox', `${state.x} ${state.y} ${state.w} ${state.h}`);
+    const pct = Math.round((orig.w / state.w) * 100);
+    levelSpan.textContent = pct + '%';
+  }
+
+  function zoom(factor, cx, cy) {
+    const newW = Math.max(orig.w * MIN_SCALE, Math.min(orig.w / MIN_SCALE, state.w * factor));
+    const newH = newW * (orig.h / orig.w);
+    if (newW / orig.w > MAX_SCALE || orig.w / newW > MAX_SCALE) return;
+    const rx = (cx - state.x) / state.w;
+    const ry = (cy - state.y) / state.h;
+    state.x = cx - rx * newW;
+    state.y = cy - ry * newH;
+    state.w = newW;
+    state.h = newH;
+    applyVB();
+  }
+
+  function svgPoint(clientX, clientY) {
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: state.x + (clientX - rect.left) / rect.width * state.w,
+      y: state.y + (clientY - rect.top) / rect.height * state.h
+    };
+  }
+
+  svg.addEventListener('pointerdown', function(e) {
+    if (e.button !== 0) return;
+    state.dragging = true;
+    state.didDrag = false;
+    state.startX = e.clientX;
+    state.startY = e.clientY;
+    state.startVBX = state.x;
+    state.startVBY = state.y;
+    svg.classList.add('panning');
+    svg.setPointerCapture(e.pointerId);
+  });
+
+  svg.addEventListener('pointermove', function(e) {
+    if (!state.dragging) return;
+    const rect = svg.getBoundingClientRect();
+    const dx = (e.clientX - state.startX) / rect.width * state.w;
+    const dy = (e.clientY - state.startY) / rect.height * state.h;
+    if (Math.abs(e.clientX - state.startX) > 3 || Math.abs(e.clientY - state.startY) > 3) state.didDrag = true;
+    state.x = state.startVBX - dx;
+    state.y = state.startVBY - dy;
+    applyVB();
+  });
+
+  svg.addEventListener('pointerup', function(e) {
+    state.dragging = false;
+    svg.classList.remove('panning');
+  });
+
+  container._zoomPanState = state;
+
+  btnIn.addEventListener('click', function() {
+    zoom(0.75, state.x + state.w / 2, state.y + state.h / 2);
+  });
+  btnOut.addEventListener('click', function() {
+    zoom(1.33, state.x + state.w / 2, state.y + state.h / 2);
+  });
+  btnReset.addEventListener('click', function() {
+    state.x = orig.x; state.y = orig.y; state.w = orig.w; state.h = orig.h;
+    applyVB();
+  });
+
+  applyVB();
+}
+
+function renderFsmMacroSvg(container, trans) {
+  container.innerHTML = '';
+  const nodeIdSet = new Set();
+  for (const k of trans.keys()) {
+    const [a, b] = k.split('\0');
+    nodeIdSet.add(a);
+    nodeIdSet.add(b);
+  }
+  const allIds = [...nodeIdSet];
+  if (!allIds.length) return {};
+
+  const fixedOrder = ['UserInput', 'Entry', 'Prep', 'LLM', 'Response'];
+  const handoffIds = allIds.filter(id => isHandoffMacroId(id)).sort();
+  const toolIds = allIds.filter(id => !fixedOrder.includes(id) && !isHandoffMacroId(id)).sort();
+  const presentFixed = fixedOrder.filter(id => nodeIdSet.has(id));
+
+  const layers = [];
+  for (const id of presentFixed) {
+    if (id === 'LLM') {
+      layers.push({ ids: [id], cat: 'llm' });
+      if (toolIds.length) layers.push({ ids: toolIds, cat: 'tools' });
+    } else if (id === 'Prep') {
+      layers.push({ ids: [id], cat: 'process' });
+    } else {
+      layers.push({ ids: [id], cat: 'state' });
+    }
+  }
+  if (handoffIds.length) layers.push({ ids: handoffIds, cat: 'handoff' });
+  if (!layers.length) {
+    layers.push({ ids: allIds, cat: 'tools' });
+  }
+
+  const NW = 170, NH = 54, TW = 160, TH = 52, PW = 210, PH = 56, HW = 200, HH = 56;
+  const layerGap = 90, toolGap = 28, maxToolCols = 4, sideM = 110;
+
+  let maxW = NW;
+  for (const l of layers) {
+    if (l.cat === 'tools') {
+      const c = Math.min(l.ids.length, maxToolCols);
+      maxW = Math.max(maxW, c * TW + (c - 1) * toolGap);
+    }
+    if (l.cat === 'handoff') {
+      const c = Math.min(l.ids.length, maxToolCols);
+      maxW = Math.max(maxW, c * HW + (c - 1) * toolGap);
+    }
+  }
+  const VBW = sideM * 2 + maxW + 60;
+  const cx = VBW / 2;
+
+  const pos = {}, layerOf = {};
+  let curY = 48;
+  layers.forEach((l, li) => {
+    const n = l.ids.length;
+    if ((l.cat === 'tools' || l.cat === 'handoff') && n > 1) {
+      const cellW = l.cat === 'handoff' ? HW : TW;
+      const cellH = l.cat === 'handoff' ? HH : TH;
+      const cols = Math.min(n, maxToolCols);
+      const rows = Math.ceil(n / cols);
+      for (let i = 0; i < n; i++) {
+        const row = Math.floor(i / cols), col = i % cols;
+        const rc = Math.min(cols, n - row * cols);
+        const rw = rc * cellW + (rc - 1) * toolGap;
+        const sx = cx - rw / 2 + cellW / 2;
+        pos[l.ids[i]] = { x: sx + col * (cellW + toolGap), y: curY + row * (cellH + 14) + cellH / 2, w: cellW, h: cellH };
+        layerOf[l.ids[i]] = li;
+      }
+      curY += rows * (cellH + 14) - 14 + layerGap;
+    } else {
+      const w = l.cat === 'process' ? PW : l.cat === 'tools' ? TW : l.cat === 'handoff' ? HW : NW;
+      const h = l.cat === 'process' ? PH : l.cat === 'tools' ? TH : l.cat === 'handoff' ? HH : NH;
+      if (n === 1) {
+        pos[l.ids[0]] = { x: cx, y: curY + h / 2, w, h };
+        layerOf[l.ids[0]] = li;
+      } else {
+        const rw = n * w + (n - 1) * 16;
+        const sx = cx - rw / 2 + w / 2;
+        l.ids.forEach((id, i) => {
+          pos[id] = { x: sx + i * (w + 16), y: curY + h / 2, w, h };
+          layerOf[id] = li;
+        });
+      }
+      curY += layerGap;
+    }
+  });
+  const VBH = curY + 24;
+
+  const svg = svgEl('svg', { class: 'svg-graph fsm', viewBox: `0 0 ${VBW} ${VBH}`, preserveAspectRatio: 'xMidYMid meet' }, container);
+  svg.setAttribute('overflow', 'visible');
+  const defs = svgEl('defs', {}, svg);
+  [['fsmArr', 'var(--text)', '0.7'], ['fsmArrBack', 'var(--teal)', '0.8'], ['fsmArrHandoff', 'var(--orange)', '0.85']].forEach(([mid, col, op]) => {
+    const mk = svgEl('marker', { id: mid, markerWidth: '10', markerHeight: '8', refX: '9', refY: '4', orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+    svgEl('path', { d: 'M 0 0.5 L 0 7.5 L 9 4 z', fill: col, opacity: op }, mk);
+  });
+
+  /* ── Loop annotation boxes ── */
+  const annoG = svgEl('g', {}, svg);
+  const hasToolBack = [...trans.keys()].some(k => {
+    const [f, t] = k.split('\0');
+    return toolIds.includes(f) && (t === 'Prep' || t === 'LLM');
+  });
+  let loopBoxRight = 0;
+  if (hasToolBack && pos['LLM'] && toolIds.some(id => pos[id])) {
+    const lp = pos['LLM'];
+    const tps = toolIds.map(id => pos[id]).filter(Boolean);
+    const bx1 = Math.min(lp.x - lp.w / 2, ...tps.map(p => p.x - p.w / 2)) - 20;
+    const bx2 = Math.max(lp.x + lp.w / 2, ...tps.map(p => p.x + p.w / 2)) + 20;
+    const by1 = lp.y - lp.h / 2 - 16;
+    const by2 = Math.max(...tps.map(p => p.y + p.h / 2)) + 16;
+    loopBoxRight = bx2;
+    svgEl('rect', { class: 'fsm-loop-box fsm-loop-box--tool', x: String(bx1), y: String(by1), width: String(bx2 - bx1), height: String(by2 - by1), rx: '12', ry: '12' }, annoG);
+    svgEl('text', { class: 'fsm-loop-label-text', x: String(bx2 - 4), y: String(by1 - 5), 'text-anchor': 'end' }, annoG).textContent = 'LLM \u2194 TOOL EXECUTION LOOP';
+  }
+
+  /* ── Edges ── */
+  const eG = svgEl('g', { class: 'edges' }, svg);
+  const edgePathMap = Object.create(null);
+  let backOff = 0;
+  let toolResultLabelPlaced = false;
+  for (const [k, c] of trans) {
+    const [from, to] = k.split('\0');
+    const p1 = pos[from], p2 = pos[to];
+    if (!p1 || !p2) continue;
+    const li1 = layerOf[from], li2 = layerOf[to];
+    const self = from === to;
+    const back = !self && li2 <= li1;
+    const skip = !self && !back && li2 - li1 > 1;
+    const edgeKey = from + '\0' + to;
+    const toHandoff = isHandoffMacroId(to);
+    const fwdMarker = toHandoff ? 'url(#fsmArrHandoff)' : 'url(#fsmArr)';
+
+    if (self) {
+      const r = 20;
+      const sx = p1.x + p1.w / 2;
+      const d = `M ${sx} ${p1.y - p1.h * 0.3} C ${sx + r * 2.8} ${p1.y - p1.h - r * 0.5}, ${sx + r * 2.8} ${p1.y + p1.h + r * 0.5}, ${sx} ${p1.y + p1.h * 0.3}`;
+      const path = svgEl('path', { class: 'edge', d, 'marker-end': fwdMarker, 'data-from': from, 'data-to': to }, eG);
+      edgePathMap[edgeKey] = path;
+      if (c > 1) svgEl('text', { class: 'edge-label', x: String(sx + r * 2.8 + 6), y: String(p1.y + 3) }, eG).textContent = '\u00d7' + c;
+      svgEl('title', {}, eG.lastChild || eG).textContent = `${from} \u2192 ${to} \u00b7 ${c}\u00d7`;
+    } else if (back) {
+      backOff++;
+      const off = 22 + backOff * 22;
+      const x1 = p1.x - p1.w / 2, y1 = p1.y;
+      const x2 = p2.x - p2.w / 2, y2 = p2.y;
+      const sx = Math.min(x1, x2) - off;
+      const d = `M ${x1} ${y1} C ${sx} ${y1}, ${sx} ${y2}, ${x2} ${y2}`;
+      const path = svgEl('path', { class: 'edge edge-back', d, 'marker-end': 'url(#fsmArrBack)', 'data-from': from, 'data-to': to }, eG);
+      edgePathMap[edgeKey] = path;
+      svgEl('title', {}, path).textContent = `${from} \u2192 ${to} \u00b7 ${c}\u00d7`;
+      const my = (y1 + y2) / 2;
+      let lbl = '';
+      const isToolResult = toolIds.includes(from) && (to === 'Prep' || to === 'LLM');
+      if (isToolResult && !toolResultLabelPlaced) {
+        lbl = 'tool result';
+        toolResultLabelPlaced = true;
+      } else if (from === 'Response' && to === 'Prep') {
+        lbl = 'next iteration';
+      }
+      if (lbl || c > 1) svgEl('text', { class: 'edge-label fsm-back-label', x: String(sx - 4), y: String(my + 3), 'text-anchor': 'end' }, eG).textContent = lbl + (c > 1 ? ' \u00d7' + c : '');
+    } else if (skip) {
+      const rSide = Math.max(p1.x + p1.w / 2, p2.x + p2.w / 2, loopBoxRight) + 32;
+      const y1 = p1.y, y2 = p2.y;
+      const d = `M ${p1.x + p1.w / 2} ${y1} C ${rSide} ${y1}, ${rSide} ${y2}, ${p2.x + p2.w / 2} ${y2}`;
+      const path = svgEl('path', { class: 'edge', d, 'marker-end': fwdMarker, 'data-from': from, 'data-to': to }, eG);
+      edgePathMap[edgeKey] = path;
+      svgEl('title', {}, path).textContent = `${from} \u2192 ${to} \u00b7 ${c}\u00d7`;
+      const mx = rSide + 6, my = (y1 + y2) / 2;
+      if (from === 'LLM' && to === 'Response') {
+        svgEl('text', { class: 'edge-label', x: String(mx), y: String(my), 'text-anchor': 'start' }, eG).textContent = 'exit: no tool call';
+      }
+      if (c > 1) svgEl('text', { class: 'edge-label', x: String(mx), y: String(my + 12), 'text-anchor': 'start' }, eG).textContent = '\u00d7' + c;
+    } else {
+      const x1 = p1.x, y1 = p1.y + p1.h / 2;
+      const x2 = p2.x, y2 = p2.y - p2.h / 2;
+      let d;
+      if (Math.abs(x1 - x2) < 3) d = `M ${x1} ${y1} L ${x2} ${y2}`;
+      else { const my = (y1 + y2) / 2; d = `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`; }
+      const path = svgEl('path', { class: 'edge', d, 'marker-end': fwdMarker, 'data-from': from, 'data-to': to }, eG);
+      edgePathMap[edgeKey] = path;
+      svgEl('title', {}, path).textContent = `${from} \u2192 ${to} \u00b7 ${c}\u00d7`;
+      if (c > 1) {
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        svgEl('text', { class: 'edge-label', x: String(mx + 10), y: String(my + 3) }, eG).textContent = '\u00d7' + c;
+      }
+    }
+  }
+
+  /* ── Nodes ── */
+  const nodeMap = Object.create(null);
+  for (const id of allIds) {
+    const p = pos[id];
+    if (!p) continue;
+    const isTool = toolIds.includes(id);
+    const isProc = id === 'Prep';
+    const isHandoff = isHandoffMacroId(id);
+    let cls = 'fsm-node';
+    if (isTool) cls += ' fsm-node--tool';
+    if (isProc) cls += ' fsm-node--process';
+    if (id === 'LLM') cls += ' fsm-node--llm';
+    if (id === 'Response') cls += ' fsm-node--response';
+    if (id === 'UserInput') cls += ' fsm-node--user';
+    if (isHandoff) cls += ' fsm-node--handoff';
+
+    const g = svgEl('g', { class: cls, 'data-macro': id }, svg);
+    svgEl('rect', {
+      x: String(p.x - p.w / 2), y: String(p.y - p.h / 2),
+      width: String(p.w), height: String(p.h),
+      rx: isProc ? '4' : isHandoff ? '6' : '10', ry: isProc ? '4' : isHandoff ? '6' : '10',
+    }, g);
+
+    if (isProc) {
+      svgEl('text', { x: String(p.x), y: String(p.y - 4), class: 'fsm-node-label', style: 'font-size:13px' }, g).textContent = 'Sub Agent Setup';
+      svgEl('text', { x: String(p.x), y: String(p.y + 12), class: 'fsm-node-sublabel', style: 'font-size:10px' }, g).textContent = 'variables \u00b7 prompt buffer';
+    } else if (isHandoff) {
+      const topicName = handoffTargetName(id);
+      const lines = svgTextLines(topicName, 24, '_');
+      const lh = 15, totalH = (lines.length + 1) * lh;
+      const sy = p.y - totalH / 2 + lh * 0.7;
+      svgEl('text', { x: String(p.x), y: String(sy), class: 'fsm-node-sublabel', style: 'font-size:10px;font-weight:700;letter-spacing:.5px' }, g).textContent = 'SUB AGENT HANDOFF';
+      const tEl = svgEl('text', { x: String(p.x), y: String(sy + lh), class: 'fsm-node-label', style: 'font-size:13px' }, g);
+      lines.forEach((line, li) => {
+        const sp = svgEl('tspan', { x: String(p.x), dy: li ? String(lh) : '0' }, tEl);
+        sp.textContent = line;
+      });
+    } else {
+      const lines = svgTextLines(id, 20, '_');
+      const lh = 15, totalH = lines.length * lh;
+      const sy = p.y - totalH / 2 + lh * 0.7;
+      const tEl = svgEl('text', { x: String(p.x), y: String(sy), class: 'fsm-node-label', style: 'font-size:13px' }, g);
+      lines.forEach((line, li) => {
+        const sp = svgEl('tspan', { x: String(p.x), dy: li ? String(lh) : '0' }, tEl);
+        sp.textContent = line;
+      });
+    }
+
+    svgEl('title', {}, g).textContent = isHandoff ? `Sub agent handoff \u2192 ${handoffTargetName(id)}` : isTool ? `${id} (tool execution)` : isProc ? 'Sub Agent Setup: variable updates, prompt buffer, tool enabling' : `${id} (state)`;
+    nodeMap[id] = g;
+  }
+
+  return { nodeMap, edgePathMap };
+}
+
+function renderFsm(topicId, parsed, startAtEnd) {
+  readFilterUiToPrefs();
+  const plan = (currentData && currentData.plan) || [];
+  fsmPlayback.rawEvents = buildRawTopicTimeline(plan, topicId, vizParsed && vizParsed.stepTopicMap);
+  fsmPlayback.events = applyTimelineFilters(plan, fsmPlayback.rawEvents, timelineFilterPrefs);
+  fsmPlayback.idx = -1;
+  fsmPlayback.nodeMap = null;
+  fsmPlayback.edgePathMap = null;
+
+  const fsmTitle = parsed.displayNames[topicId] || topicId.replace(/_/g, ' ');
+  document.getElementById('fsmTopicLabel').textContent = fsmTitle;
+  document.getElementById('fsmTopicLabel').style.opacity = '1';
+  document.getElementById('fsmDiagramLabel').textContent = fsmTitle;
+
+  const trans = parsed.fsmEdges[topicId];
+  const el = document.getElementById('fsmWrap');
+  el.innerHTML = '';
+
+  const macroSlot = document.createElement('div');
+  macroSlot.className = 'fsm-macro-slot';
+
+  if (trans && trans.size > 0) {
+    const result = renderFsmMacroSvg(macroSlot, trans);
+    fsmPlayback.nodeMap = result.nodeMap;
+    fsmPlayback.edgePathMap = result.edgePathMap;
+    setupSvgZoomPan(macroSlot);
+  } else {
+    macroSlot.innerHTML =
+      '<div style="padding:22px;font-size:12px;color:var(--text-dim);text-align:center;line-height:1.55">No Finite State Machine edges for this sub agent.</div>';
+  }
+
+  el.appendChild(macroSlot);
+
+  const playbar = document.getElementById('inspectorPlaybar');
+  playbar.style.display = '';
+
+  const detailSlot = document.getElementById('fsmDetailSlot');
+  detailSlot.innerHTML = '';
+
+  const n = fsmPlayback.events.length;
+
+  if (n === 0) {
+    detailSlot.innerHTML =
+      fsmPlayback.rawEvents.length === 0
+        ? '<div style="padding:18px;font-size:13px;color:var(--text-dim);line-height:1.5">No plan steps attributed to this sub agent.</div>'
+        : '<div style="padding:18px;font-size:13px;color:var(--text-dim);line-height:1.5">No events match the current filters.</div>';
+    document.getElementById('fsmStepLabel').textContent = '0 / 0';
+    setFsmHighlight(null, null);
+    syncFsmPlaybar();
+    attachFsmKeyboardNav();
+    return;
+  }
+
+  setFsmPlaybackIndex(startAtEnd ? fsmPlayback.events.length - 1 : 0);
+  attachFsmKeyboardNav();
+}
+
+const MAX_INPUT_BYTES = 50 * 1024 * 1024;
+const MAX_PLAN_STEPS = 10000;
+
+function showError(msg) {
+  const t = document.createElement('div');
+  t.className = 'error-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function normalizeTrace(json) {
+  if (!json || typeof json !== 'object') return null;
+  if (Array.isArray(json.plan)) return json;
+  const steps = Array.isArray(json.allPlanSteps) && json.allPlanSteps.length
+    ? json.allPlanSteps
+    : Array.isArray(json.planSteps) ? json.planSteps : null;
+  if (!steps) return null;
+  return {
+    plan: steps,
+    planId: json.id || json.planId || null,
+    sessionId: json.sessionId || null,
+    intent: json.intent || null,
+  };
+}
+
+function loadData(json) {
+  const normalized = normalizeTrace(json);
+  if (!normalized) {
+    showError('Unrecognized format. JSON must contain a "plan" or "allPlanSteps" array.');
+    return;
+  }
+  if (normalized.plan.length > MAX_PLAN_STEPS) {
+    showError(`Plan exceeds maximum of ${MAX_PLAN_STEPS} steps.`);
+    return;
+  }
+  currentData = normalized;
+  selectedTopicId = null;
+  const parsed = parsePlan(normalized.plan);
+  analysis = analyzeGraph(parsed);
+
+  document.getElementById('mainEmpty').classList.add('hidden');
+  document.getElementById('mainViz').classList.remove('hidden');
+  document.body.classList.add('app-viz');
+  document.getElementById('btnClear').classList.remove('hidden');
+
+  const meta = document.getElementById('headerMeta');
+  meta.innerHTML = [
+    normalized.planId ? `<span class="meta-chip"><strong>Plan</strong> ${esc(String(normalized.planId).slice(0, 14))}…</span>` : '',
+    normalized.sessionId ? `<span class="meta-chip"><strong>Session</strong> ${esc(String(normalized.sessionId).slice(0, 14))}…</span>` : '',
+    `<span class="meta-chip"><strong>Sub Agents</strong> ${parsed.topics.length}</span>`,
+  ].join('');
+
+  renderMetrics(parsed, analysis);
+  renderTopicGraph(parsed);
+
+  if (parsed.topics.length > 0) {
+    selectTopic(parsed.topics[0]);
+  } else {
+    clearFsmPanel();
+  }
+}
+
+function clearAll() {
+  detachFsmKeyboardNav();
+  currentData = null;
+  analysis = null;
+  vizParsed = null;
+  selectedTopicId = null;
+  document.getElementById('topicGraph').innerHTML = '';
+  document.getElementById('topicList').innerHTML = '';
+  document.getElementById('fsmWrap').innerHTML = '';
+  document.getElementById('mainViz').classList.add('hidden');
+  document.getElementById('mainEmpty').classList.remove('hidden');
+  document.body.classList.remove('app-viz');
+  document.getElementById('btnClear').classList.add('hidden');
+  document.getElementById('headerMeta').innerHTML = '';
+  document.getElementById('metricsCard').classList.add('hidden');
+  document.getElementById('metricsCard').innerHTML = '';
+}
+
+function openModal() {
+  document.getElementById('uploadOverlay').classList.remove('hidden');
+  document.getElementById('jsonInput').value = '';
+}
+
+document.getElementById('btnTheme').addEventListener('click', () => {
+  document.body.classList.toggle('light');
+  document.getElementById('btnTheme').textContent = document.body.classList.contains('light') ? 'Dark' : 'Light';
+  if (vizParsed && analysis) {
+    renderTopicGraph(vizParsed);
+    if (selectedTopicId) renderFsm(selectedTopicId, vizParsed);
+  }
+});
+
+document.getElementById('fsmBtnPrev').addEventListener('click', stepFsmPrev);
+document.getElementById('fsmBtnNext').addEventListener('click', stepFsmNext);
+
+document.getElementById('btnLoad').addEventListener('click', openModal);
+document.getElementById('btnPaste').addEventListener('click', openModal);
+document.getElementById('btnCancel').addEventListener('click', () => document.getElementById('uploadOverlay').classList.add('hidden'));
+document.getElementById('btnParse').addEventListener('click', () => {
+  const v = document.getElementById('jsonInput').value.trim();
+  if (!v) return showError('Paste JSON first.');
+  if (v.length > MAX_INPUT_BYTES) return showError('Input too large. Maximum size is 50 MB.');
+  try {
+    loadData(JSON.parse(v));
+    document.getElementById('uploadOverlay').classList.add('hidden');
+  } catch (e) {
+    showError('Invalid JSON: ' + e.message);
+  }
+});
+document.getElementById('btnClear').addEventListener('click', clearAll);
+
+function readAndLoadJsonFile(f) {
+  if (!f) return;
+  if (f.size > MAX_INPUT_BYTES) { showError('File too large. Maximum size is 50 MB.'); return; }
+  const r = new FileReader();
+  r.onload = () => {
+    try { loadData(JSON.parse(r.result)); }
+    catch (err) { showError('Invalid JSON file.'); }
+  };
+  r.readAsText(f);
+}
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  readAndLoadJsonFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--blue)'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; });
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.style.borderColor = '';
+  readAndLoadJsonFile(e.dataTransfer.files[0]);
+});
+
+loadTimelineFilterPrefs();
+syncFilterUiFromPrefs();
+['chkVarUpdates', 'chkReasoning', 'chkNodeEntry', 'chkEnabledTools', 'chkAgentScriptVars'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', refreshFsmTimelineAfterFilterChange);
+});
+
+function openGraphFullscreen(svgSelector, title) {
+  const srcSvg = document.querySelector(svgSelector);
+  if (!srcSvg || !srcSvg.getAttribute('viewBox')) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'graph-fullscreen-overlay';
+  const header = document.createElement('div');
+  header.className = 'gf-header';
+  const h2 = document.createElement('h2');
+  h2.textContent = title;
+  header.appendChild(h2);
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'gf-close';
+  closeBtn.textContent = 'Close  Esc';
+  header.appendChild(closeBtn);
+  overlay.appendChild(header);
+  const body = document.createElement('div');
+  body.className = 'gf-body';
+  const clone = srcSvg.cloneNode(true);
+  clone.removeAttribute('style');
+  body.appendChild(clone);
+  overlay.appendChild(body);
+  document.body.appendChild(overlay);
+
+  const cleanup = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  closeBtn.addEventListener('click', cleanup);
+  const onKey = (e) => { if (e.key === 'Escape') cleanup(); };
+  document.addEventListener('keydown', onKey);
+
+  const parts = clone.getAttribute('viewBox').split(/\s+/).map(Number);
+  let [vx, vy, vw, vh] = parts;
+
+  clone.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = clone.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width;
+    const my = (e.clientY - rect.top) / rect.height;
+    const factor = e.deltaY > 0 ? 1.12 : 1 / 1.12;
+    const nw = vw * factor, nh = vh * factor;
+    vx += (vw - nw) * mx;
+    vy += (vh - nh) * my;
+    vw = nw; vh = nh;
+    clone.setAttribute('viewBox', `${vx} ${vy} ${vw} ${vh}`);
+  }, { passive: false });
+
+  let dragging = false, sx, sy;
+  const endDrag = () => { dragging = false; clone.classList.remove('panning'); };
+  clone.addEventListener('pointerdown', (e) => {
+    dragging = true; sx = e.clientX; sy = e.clientY;
+    clone.classList.add('panning');
+    clone.setPointerCapture(e.pointerId);
+  });
+  clone.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const rect = clone.getBoundingClientRect();
+    const dx = (e.clientX - sx) * (vw / rect.width);
+    const dy = (e.clientY - sy) * (vh / rect.height);
+    vx -= dx; vy -= dy;
+    sx = e.clientX; sy = e.clientY;
+    clone.setAttribute('viewBox', `${vx} ${vy} ${vw} ${vh}`);
+  });
+  clone.addEventListener('pointerup', endDrag);
+  clone.addEventListener('pointercancel', endDrag);
+}
+
+document.getElementById('btnExpandGraph').addEventListener('click', () => openGraphFullscreen('#topicGraph svg', 'Agent Graph'));
+document.getElementById('btnExpandFsm').addEventListener('click', () => openGraphFullscreen('#fsmWrap svg', 'Finite State Machine'));
+</script>
+</body>
+</html>

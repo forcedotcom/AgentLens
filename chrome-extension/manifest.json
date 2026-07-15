@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "AgentLens",
+  "version": "1.0.1",
+  "description": "Trace visualizer for Salesforce Agentforce agents",
+  "minimum_chrome_version": "116",
+  "permissions": ["clipboardRead"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.lightning.force.com/AgentAuthoring/agentAuthoringBuilder.app*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    },
+    "default_title": "AgentLens"
+  }
+}

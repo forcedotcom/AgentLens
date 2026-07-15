@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentLens — Privacy Policy</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 24px; line-height: 1.7; color: #1e2030; }
+h1 { font-size: 24px; margin-bottom: 4px; }
+h2 { font-size: 16px; margin-top: 28px; color: #333; }
+p, li { font-size: 14px; color: #444; }
+.date { font-size: 13px; color: #888; margin-bottom: 32px; }
+ul { padding-left: 20px; }
+</style>
+</head>
+<body>
+
+<h1>AgentLens Privacy Policy</h1>
+<p class="date">Effective date: May 5, 2026</p>
+
+<h2>Summary</h2>
+<p>AgentLens does not collect, store, transmit, or share any user data. All trace data is processed entirely within your browser and is never sent to any external server.</p>
+
+<h2>Data Handling</h2>
+<ul>
+  <li><strong>Clipboard access:</strong> AgentLens reads your clipboard only when you explicitly click the "Open in AgentLens" button. The clipboard content is used solely to load an Agentforce trace into the local viewer.</li>
+  <li><strong>No storage:</strong> Trace data exists only in the open browser tab. Closing the tab permanently discards all data. No trace data is saved to disk, local storage, or any database.</li>
+  <li><strong>No network requests:</strong> AgentLens makes zero network requests. All parsing, rendering, and visualization happens locally in your browser.</li>
+  <li><strong>No analytics:</strong> There is no tracking, telemetry, analytics, or any form of data collection.</li>
+  <li><strong>No third-party code:</strong> AgentLens has zero external dependencies. No third-party libraries, CDNs, or services are used.</li>
+</ul>
+
+<h2>Permissions Explained</h2>
+<ul>
+  <li><strong>clipboardRead:</strong> Required to read the Agentforce trace JSON that you previously copied using the "Copy Code" button in the NGA builder. Only triggered by your explicit click.</li>
+  <li><strong>activeTab:</strong> Required to inject the "Open in AgentLens" button on the NGA builder page.</li>
+</ul>
+
+<h2>Content Script</h2>
+<p>AgentLens injects a content script only on Salesforce NGA builder pages (matching <code>*.lightning.force.com/AgentAuthoring/agentAuthoringBuilder.app</code>). This script adds a single button to the page UI. It does not read, modify, or transmit any page content.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes, the updated version will be published here with a new effective date.</p>
+
+<h2>Contact</h2>
+<p>For questions about this privacy policy, open an issue at the AgentLens GitHub repository.</p>
+
+</body>
+</html>
