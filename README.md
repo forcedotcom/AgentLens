@@ -2,8 +2,6 @@
 
 Understand what your Agentforce agent actually did — visually.
 
-**Try it now:** <https://msrivastav13.github.io/AgentLens/>
-
 📝 **Blog:** [AgentLens: Debug Agentforce with Interactive Visualizations](https://developer.salesforce.com/blogs/2026/05/agentlens-debug-agentforce-with-interactive-visualizations)
 
 ![AgentLens](images/output.png)
@@ -32,12 +30,6 @@ AgentLens accepts trace JSON from any of these sources:
 | **Agentforce DX Extension** | Use the trace viewer in the Agentforce DX VS Code extension and copy the plan response JSON |
 
 ## Quick Start
-
-### Web App
-
-1. Open <https://msrivastav13.github.io/AgentLens/> (or `index.html` locally — no server required)
-2. Paste or upload a trace JSON from any of the sources above
-3. The first sub agent is auto-selected — step through the trace with arrow keys or the prev/next buttons; handoffs navigate to the next agent automatically
 
 ### Chrome Extension
 
@@ -72,4 +64,4 @@ Zero dependencies. Runs entirely in the browser. Works offline. Available as a w
 
 ## License
 
-MIT
+Apache License 2.0 — Copyright (c) 2026 Salesforce, Inc. See [LICENSE.txt](LICENSE.txt).
