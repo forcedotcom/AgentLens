@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentLens — Agentforce Trace Visualizer</title>
+<link rel="stylesheet" href="styles/theme.css">
+<link rel="stylesheet" href="styles/base.css">
+</head>
+<body>
+
+<div class="app-header">
+  <h1>AgentLens</h1>
+  <div class="header-meta" id="headerMeta"></div>
+  <div class="header-actions">
+    <button class="btn" id="btnTheme">Dark</button>
+    <button class="btn" id="btnLoad">Load JSON</button>
+    <button class="btn hidden" id="btnClear">Clear</button>
+  </div>
+</div>
+<div class="metrics-bar hidden" id="metricsCard"></div>
+
+<div id="mainEmpty" class="empty-state">
+  <h2>Visualize any Agentforce agent trace</h2>
+  <p>Load a plan response from the <strong>NGA builder</strong> or the <strong>Agentforce DX</strong> extension, then explore sub agent handoffs, finite state machines, and LLM calls — all in one view.</p>
+  <p style="font-size:12px;max-width:520px;margin:12px auto 0">Zero dependencies — runs entirely in the browser.</p>
+  <button class="btn-large" id="btnPaste">Paste JSON</button>
+  <label class="btn-large" style="display:inline-block;background:var(--surface2);color:var(--text);border-color:var(--border)">
+    Upload <input type="file" accept=".json,application/json" id="fileInput" class="hidden">
+  </label>
+  <div class="drop-zone" id="dropZone"><strong>Drop JSON here</strong></div>
+</div>
+
+<div id="mainViz" class="hidden">
+  <div class="layout">
+    <div class="panel panel--inspector" id="inspectorPanel">
+      <div class="panel-h"><span id="fsmTopicLabel" style="opacity:.5">select a sub agent &rarr;</span></div>
+      <div class="viz-toolbar" id="vizToolbar">
+        <span class="viz-toolbar-title">Show:</span>
+        <label title="Variable assignment and mutation steps"><input type="checkbox" id="chkVarUpdates" checked /> Variable Updates</label>
+        <label title="Planner reasoning, grounding checks, and prep actions"><input type="checkbox" id="chkReasoning" checked /> Reasoning</label>
+        <label title="State captured when entering a node"><input type="checkbox" id="chkNodeEntry" checked /> Node Entry</label>
+        <label title="Tools made available to the LLM at each step"><input type="checkbox" id="chkEnabledTools" checked /> Enabled Tools</label>
+        <label title="AgentScriptInternal_* system variables (usually noisy)"><input type="checkbox" id="chkAgentScriptVars" /> Internal Vars</label>
+      </div>
+      <div class="fsm-playbar" id="inspectorPlaybar" style="display:none">
+        <button type="button" class="btn-fsm" id="fsmBtnPrev" title="Previous event (← or K)">&larr; Prev</button>
+        <span id="fsmStepLabel" style="font-size:12px;font-family:var(--font-mono);color:var(--text-dim);white-space:nowrap">&mdash;</span>
+        <button type="button" class="btn-fsm" id="fsmBtnNext" title="Next event (→ or J)">Next &rarr;</button>
+        <span style="font-size:10px;color:var(--text-dim);margin-left:auto">&larr; &rarr; keys</span>
+      </div>
+      <div class="fsm-single-card" id="fsmDetailSlot"></div>
+    </div>
+    <div class="panel panel--context" id="contextPanel">
+      <div class="panel-h">Agent Graph <button type="button" class="graph-expand-btn" id="btnExpandGraph" title="Pop out graph (fullscreen)">&#x26F6;</button></div>
+      <div class="graph-wrap" id="topicGraph"></div>
+      <div class="topic-list" id="topicList"></div>
+      <div class="panel-h" style="font-size:11px">Finite State Machine &mdash; <span id="fsmDiagramLabel" style="font-weight:400;color:var(--text-dim)">select a sub agent</span> <button type="button" class="graph-expand-btn" id="btnExpandFsm" title="Pop out FSM (fullscreen)" style="margin-left:auto">&#x26F6;</button></div>
+      <div class="graph-wrap" id="fsmWrap"></div>
+    </div>
+  </div>
+</div>
+
+<div class="upload-overlay hidden" id="uploadOverlay">
+  <div class="upload-modal">
+    <h2 style="font-size:15px;margin-bottom:10px;color:var(--text-bright)">Paste Plan JSON</h2>
+    <textarea id="jsonInput" placeholder="Paste the plan response JSON here..."></textarea>
+    <div class="btn-row">
+      <button class="btn" id="btnCancel">Cancel</button>
+      <button class="btn-primary" id="btnParse">Visualize</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts in dependency order -->
+<script src="js/chrome-bridge.js"></script>
+<script src="js/data.js"></script>
+<script src="js/render.js"></script>
+<script src="js/detail.js"></script>
+<script src="js/state.js"></script>
+<script src="js/markdown.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

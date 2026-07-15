@@ -1,0 +1,13 @@
+.DS_Store
+*.swp
+*.swo
+*~
+.sfdx/
+.idea/
+.vscode/
+node_modules/
+vscode-extension/out/
+vscode-extension/node_modules/
+vscode-extension/*.vsix
+slides.html
+video-script.md

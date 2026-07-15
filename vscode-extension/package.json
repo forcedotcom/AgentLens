@@ -1,0 +1,73 @@
+{
+  "name": "agentlens-viewer",
+  "displayName": "AgentLens Visualizer",
+  "description": "Visualize Agentforce agent execution traces — agent graph, FSM diagrams, and step-by-step inspector.",
+  "version": "0.3.0",
+  "publisher": "MohithShrivastava",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/msrivastav13/AgentLens"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:json"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "agentlens.traceViewer",
+        "displayName": "AgentLens",
+        "selector": [
+          { "filenamePattern": "*.json" }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "agentlens.openTrace",
+        "title": "AgentLens: Open Trace"
+      },
+      {
+        "command": "agentlens.openTraceFromFile",
+        "title": "Open with AgentLens"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .json",
+          "command": "agentlens.openTraceFromFile",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceExtname == .json",
+          "command": "agentlens.openTraceFromFile",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.95.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
