@@ -45,9 +45,9 @@ Issues labelled `good first contribution`.
   - Module-level & function-level comments.
   - Comments on complex blocks of code or algorithms (include references to sources).
 - [x] Tests
-  - The test suite, if provided, must be complete and pass
+  - The test suite, if provided, must be complete and pass.
   - Increase code coverage, not versa.
-  - Use any of our testkits that contains a bunch of testing facilities you would need. For example: `import com.salesforce.op.test._` and borrow inspiration from existing tests.
+  - Test kit is still being worked out, but if you have one in mind please propose.
 - [x] Dependencies
   - Minimize number of dependencies.
   - Prefer Apache 2.0, BSD3, MIT, ISC and MPL licenses.
