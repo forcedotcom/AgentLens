@@ -1,0 +1,212 @@
+{
+  &quot;id&quot;: &quot;cd51c61f-0da9-49a9-a558-e5ee57793df3&quot;,
+  &quot;message&quot;: &quot;Please provide the details of your query or issue so we can assist you through the Sales Helpline.&quot;,
+  &quot;intent&quot;: &quot;Sales_Helpline_Case_Creation&quot;,
+  &quot;userTypedMessage&quot;: &quot;helpline&quot;,
+  &quot;sessionId&quot;: &quot;49dbc6d4-2afc-4894-b166-cb910b391f0f&quot;,
+  &quot;planSteps&quot;: [
+    {
+      &quot;startExecutionTime&quot;: 1786365438968,
+      &quot;endExecutionTime&quot;: 1786365438980,
+      &quot;type&quot;: &quot;UserInputStep&quot;,
+      &quot;message&quot;: &quot;helpline&quot;,
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_0&quot;,
+      &quot;iconName&quot;: &quot;standard:default&quot;,
+      &quot;isInternal&quot;: false
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365438980,
+      &quot;endExecutionTime&quot;: 1786365438980,
+      &quot;type&quot;: &quot;SessionInitialStateStep&quot;,
+      &quot;data&quot;: {
+        &quot;directive_context&quot;: &quot;on_message&quot;,
+        &quot;variable_values&quot;: {
+          &quot;__resolved_locale__&quot;: &quot;en_US&quot;,
+          &quot;__locale_instruction__&quot;: &quot;Reply ONLY in en_US, en_GB. Other languages are prohibited.&quot;,
+          &quot;__supports_result_display__&quot;: false,
+          &quot;__show_tool_results_invoked__&quot;: false,
+          &quot;__current_date_time__&quot;: &quot;Monday, 2026-08-10T12:37:18.974386+00:00 (UTC+0)&quot;,
+          &quot;AgentScriptInternal_next_topic&quot;: &quot;__EMPTY__&quot;,
+          &quot;AgentScriptInternal_agent_instructions&quot;: &quot;&quot;,
+          &quot;uploaded_doc_id&quot;: &quot;&quot;,
+          &quot;upload_status&quot;: &quot;&quot;,
+          &quot;created_case_id&quot;: &quot;&quot;,
+          &quot;dg_enriched_json&quot;: &quot;&quot;,
+          &quot;dg_update_done&quot;: false,
+          &quot;dg_update_message&quot;: &quot;&quot;,
+          &quot;nc_upload_status&quot;: &quot;&quot;,
+          &quot;nc_uploaded_doc_id&quot;: &quot;&quot;,
+          &quot;nc_case_id&quot;: &quot;&quot;,
+          &quot;nc_customer_id&quot;: &quot;&quot;,
+          &quot;nc_first_name&quot;: &quot;&quot;,
+          &quot;nc_last_name&quot;: &quot;&quot;,
+          &quot;nc_middle_name&quot;: &quot;&quot;,
+          &quot;nc_demographics_done&quot;: false,
+          &quot;nc_demographics_success&quot;: false,
+          &quot;nc_demographics_error&quot;: &quot;&quot;,
+          &quot;nc_case_number&quot;: &quot;&quot;,
+          &quot;caseNumber&quot;: &quot;&quot;,
+          &quot;shId&quot;: &quot;&quot;,
+          &quot;nc_opp_number&quot;: &quot;&quot;,
+          &quot;nc_case_created&quot;: false,
+          &quot;nc_customer_name&quot;: &quot;&quot;,
+          &quot;sh_status&quot;: &quot;&quot;,
+          &quot;sh_errorMessage&quot;: &quot;&quot;,
+          &quot;nc_user_confirmed&quot;: &quot;&quot;,
+          &quot;dg_entered&quot;: false,
+          &quot;sh_entered&quot;: false,
+          &quot;nc_init_error&quot;: &quot;&quot;,
+          &quot;dg_case_number&quot;: &quot;&quot;,
+          &quot;__user_input__&quot;: &quot;helpline&quot;,
+          &quot;__current_modality__&quot;: &quot;text&quot;,
+          &quot;__current_connection__&quot;: &quot;CustomerWebClient&quot;
+        }
+      },
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_1&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;isInternal&quot;: false
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365438980,
+      &quot;endExecutionTime&quot;: 1786365438980,
+      &quot;type&quot;: &quot;VariableUpdateStep&quot;,
+      &quot;data&quot;: {
+        &quot;variable_updates&quot;: [
+          {
+            &quot;variable_name&quot;: &quot;__current_date_time__&quot;,
+            &quot;variable_new_value&quot;: &quot;Monday, 2026-08-10T12:37:18.974386+00:00 (UTC+0)&quot;,
+            &quot;variable_change_reason&quot;: &quot;Updated each turn&quot;,
+            &quot;directive_context&quot;: &quot;on_message&quot;
+          }
+        ]
+      },
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_2&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;isInternal&quot;: true
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365438981,
+      &quot;endExecutionTime&quot;: 1786365439082,
+      &quot;type&quot;: &quot;VariableUpdateStep&quot;,
+      &quot;data&quot;: {
+        &quot;variable_updates&quot;: [
+          {
+            &quot;variable_name&quot;: &quot;AgentScriptInternal_agent_instructions&quot;,
+            &quot;variable_past_value&quot;: &quot;&quot;,
+            &quot;variable_new_value&quot;: &quot;\nRoute the user to the correct subagent based on their intent.&quot;,
+            &quot;variable_change_reason&quot;: &quot;State update via expression&quot;,
+            &quot;directive_context&quot;: &quot;after_action&quot;
+          }
+        ]
+      },
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_4&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;isInternal&quot;: true
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365439082,
+      &quot;endExecutionTime&quot;: 1786365439155,
+      &quot;type&quot;: &quot;UpdateTopicStep&quot;,
+      &quot;topic&quot;: &quot;Sales_Helpline_Case_Creation&quot;,
+      &quot;description&quot;: &quot;Sales_Helpline_Case_Creation&quot;,
+      &quot;instructions&quot;: [],
+      &quot;availableFunctions&quot;: [],
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_5&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;masterLabel&quot;: &quot;Sales Helpline Case Creation&quot;,
+      &quot;isInternal&quot;: false
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365439155,
+      &quot;endExecutionTime&quot;: 1786365439155,
+      &quot;type&quot;: &quot;TransitionStep&quot;,
+      &quot;data&quot;: {
+        &quot;from_agent&quot;: &quot;Agent Router&quot;,
+        &quot;to_agent&quot;: &quot;Sales_Helpline_Case_Creation&quot;,
+        &quot;transition_type&quot;: &quot;handoff&quot;,
+        &quot;transition_mode&quot;: &quot;manual&quot;,
+        &quot;directive_context&quot;: &quot;on_response&quot;
+      },
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_6&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;isInternal&quot;: false
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365439155,
+      &quot;endExecutionTime&quot;: 1786365439155,
+      &quot;type&quot;: &quot;NodeEntryStateStep&quot;,
+      &quot;data&quot;: {
+        &quot;agent_name&quot;: &quot;Sales_Helpline_Case_Creation&quot;,
+        &quot;directive_context&quot;: &quot;on_message&quot;,
+        &quot;state_variables&quot;: {
+          &quot;__resolved_locale__&quot;: &quot;en_US&quot;,
+          &quot;__user_input__&quot;: &quot;helpline&quot;,
+          &quot;__current_modality__&quot;: &quot;text&quot;,
+          &quot;__current_connection__&quot;: &quot;CustomerWebClient&quot;
+        }
+      },
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_7&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;isInternal&quot;: false
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365439174,
+      &quot;endExecutionTime&quot;: 1786365439174,
+      &quot;type&quot;: &quot;EnabledToolsStep&quot;,
+      &quot;data&quot;: {
+        &quot;agent_name&quot;: &quot;Sales_Helpline_Case_Creation&quot;,
+        &quot;directive_context&quot;: &quot;on_message&quot;,
+        &quot;enabled_tools&quot;: [
+          &quot;Create_Sales_Helpline_Case_v2&quot;,
+          &quot;go_to_main_menu&quot;,
+          &quot;go_to_do_governance&quot;,
+          &quot;go_to_customer_name_change&quot;,
+          &quot;user_select_record&quot;,
+          &quot;__user_input__&quot;
+        ]
+      },
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_12&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;isInternal&quot;: false
+    },
+    {
+      &quot;startExecutionTime&quot;: 1786365439172,
+      &quot;endExecutionTime&quot;: 1786365440010,
+      &quot;type&quot;: &quot;LLMStep&quot;,
+      &quot;data&quot;: {
+        &quot;agent_name&quot;: &quot;Sales Helpline Case Creation&quot;,
+        &quot;prompt_name&quot;: &quot;Sales Helpline Case Creation_prompt&quot;,
+        &quot;execution_latency&quot;: 838
+      },
+      &quot;messages_sent&quot;: [
+        {
+          &quot;role&quot;: &quot;user&quot;,
+          &quot;content&quot;: &quot;helpline&quot;
+        }
+      ],
+      &quot;tools_sent&quot;: [
+        &quot;Create_Sales_Helpline_Case_v2&quot;,
+        &quot;go_to_main_menu&quot;,
+        &quot;go_to_do_governance&quot;,
+        &quot;go_to_customer_name_change&quot;,
+        &quot;user_select_record&quot;,
+        &quot;__user_input__&quot;
+      ],
+      &quot;response_messages&quot;: [
+        {
+          &quot;role&quot;: &quot;assistant&quot;,
+          &quot;content&quot;: &quot;&quot;,
+          &quot;tool_invocation&quot;: {
+            &quot;name&quot;: &quot;__user_input__&quot;,
+            &quot;arguments&quot;: &quot;{\&quot;action_name\&quot;:\&quot;Create_Sales_Helpline_Case_v2\&quot;,\&quot;fields\&quot;:[\&quot;caseRequest\&quot;],\&quot;message\&quot;:\&quot;Please provide the details of your query or issue so we can assist you through the Sales Helpline.\&quot;}&quot;
+          }
+        }
+      ],
+      &quot;id&quot;: &quot;0d2616f6-a901-4dd1-b28b-8b07c10a2009_step_13&quot;,
+      &quot;iconName&quot;: &quot;utility:einstein&quot;,
+      &quot;isInternal&quot;: false
+    }
+  ],
+  &quot;userMessages&quot;: [],
+  &quot;type&quot;: &quot;Interaction&quot;
+}
