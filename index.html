@@ -2319,6 +2319,29 @@ function openModal() {
   document.getElementById('jsonInput').value = '';
 }
 
+// Decode HTML entities (e.g. &quot; &amp; &#39;) that appear when a trace is
+// copied from a rendered page. Uses the browser's own parser via a textarea,
+// whose content is RCDATA, so no markup executes.
+function decodeHtmlEntities(str) {
+  const ta = document.createElement('textarea');
+  ta.innerHTML = str;
+  return ta.value;
+}
+
+// Parses user-supplied trace JSON, tolerating input that has been HTML-encoded.
+// Clean JSON parses on the first attempt and is untouched; only when that fails
+// do we decode HTML entities and retry, so legitimate entity-like text inside
+// string values is never altered.
+function parseTraceJson(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    const decoded = decodeHtmlEntities(raw);
+    if (decoded === raw) throw e;
+    return JSON.parse(decoded);
+  }
+}
+
 document.getElementById('btnTheme').addEventListener('click', () => {
   document.body.classList.toggle('light');
   document.getElementById('btnTheme').textContent = document.body.classList.contains('light') ? 'Dark' : 'Light';
@@ -2339,7 +2362,7 @@ document.getElementById('btnParse').addEventListener('click', () => {
   if (!v) return showError('Paste JSON first.');
   if (v.length > MAX_INPUT_BYTES) return showError('Input too large. Maximum size is 50 MB.');
   try {
-    loadData(JSON.parse(v));
+    loadData(parseTraceJson(v));
     document.getElementById('uploadOverlay').classList.add('hidden');
   } catch (e) {
     showError('Invalid JSON: ' + e.message);
@@ -2352,7 +2375,7 @@ function readAndLoadJsonFile(f) {
   if (f.size > MAX_INPUT_BYTES) { showError('File too large. Maximum size is 50 MB.'); return; }
   const r = new FileReader();
   r.onload = () => {
-    try { loadData(JSON.parse(r.result)); }
+    try { loadData(parseTraceJson(r.result)); }
     catch (err) { showError('Invalid JSON file.'); }
   };
   r.readAsText(f);
