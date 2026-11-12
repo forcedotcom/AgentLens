@@ -15,7 +15,7 @@
 // The page is the real AgentLens index.html with a loader appended that calls
 // the app's own parseTraceJson + loadData, so parsing/validation is the app's.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { join, dirname, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir, homedir, platform } from 'node:os';
@@ -383,7 +383,9 @@ async function main() {
   console.log(JSON.stringify({ opened, page: out, app, selected: selection, warnings }, null, 2));
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Compare real paths: `npx skills` installs by symlinking the skill folder
+// (e.g. .claude/skills/x -> .agents/skills/x), and import.meta.url is the resolved target.
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   main().catch(e => {
     console.error(`open-agentlens: ${e.message}`);
     process.exit(e instanceof UsageError ? 2 : 1);

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, utimesSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, utimesSync, symlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -141,6 +141,13 @@ describe('open-agentlens skill script', () => {
     expect(unknown.stderr).toMatch(/Agents with traces here: .*Service/);
     expect(run(['--agent', 'Orders', '--turn', '2'], root).stderr).toMatch(/empty trace/);
     expect(run(['--agent', 'Service', '--turn', '9'], root).stderr).toMatch(/no turn 9/);
+  });
+
+  it('runs when invoked through a symlinked skill folder (as `npx skills` installs it)', () => {
+    const link = join(root, 'linked-skill');
+    symlinkSync(dirname(SCRIPT), link);
+    const out = execFileSync('node', [join(link, 'open-agentlens.mjs'), '--list'], { cwd: root, encoding: 'utf8' });
+    expect(JSON.parse(out).sessions.length).toBeGreaterThan(0);
   });
 
   it('lists sessions with their user messages', () => {

@@ -56,9 +56,21 @@ Or search for **AgentLens Visualizer** in the VS Code Extensions panel (`Cmd+Shi
 
 The extension provides the same visualization inside VS Code with native theme integration — right-click any trace JSON file and select **Open with AgentLens**.
 
+### Agent Skill (Codex, OpenCode, Cursor, Claude Code, and others)
+
+The `open-agentlens` skill follows the open [Agent Skills](https://agentskills.io) format, so any agent that supports skills can use it. Install it with the [`skills`](https://github.com/vercel-labs/skills) CLI:
+
+```bash
+npx skills add forcedotcom/AgentLens --skill open-agentlens            # this project
+npx skills add forcedotcom/AgentLens --skill open-agentlens -g         # all projects
+npx skills add forcedotcom/AgentLens --skill open-agentlens -a codex   # one specific agent
+```
+
+The CLI puts the skill in `.agents/skills/open-agentlens/`, where Codex and OpenCode read skills, and links it into `.claude/skills/` for Claude Code. Then ask your agent to "open AgentLens" from inside your DX project. The skill needs Node 18+. The first time it runs outside a checkout of this repo, it downloads the AgentLens app from GitHub and caches it in `~/.cache/agentlens/`.
+
 ### Claude Code Plugin
 
-Install the plugin in Claude Code:
+The skill also ships as a Claude Code plugin, which bundles its eval suite. Install it in Claude Code:
 
 ```
 /plugin install agentlens --marketplace forcedotcom/AgentLens

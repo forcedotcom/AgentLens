@@ -18,10 +18,10 @@ Copies saved with `sf agent preview --output-dir` land in `<dir>/<Agent>/session
 
 ## How to open
 
-Run the bundled script from the DX project directory (any subdirectory works):
+The script is `scripts/open-agentlens.mjs`, inside this skill's own folder (the folder that holds this SKILL.md). It needs Node 18+. Run it from the DX project directory (any subdirectory works), using the script's absolute path:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/open-agentlens/scripts/open-agentlens.mjs" [path] [--agent <name>] [--session <id>] [--turn <n|last>] [--plan <planId>]
+node <skill-folder>/scripts/open-agentlens.mjs [path] [--agent <name>] [--session <id>] [--turn <n|last>] [--plan <planId>]
 ```
 
 Run it as one bare `node` command. Don't chain `; echo $?`, `&&`, or `cd`, because only `node` is pre-approved, and a failure's exit code and message show up on their own.
@@ -60,5 +60,5 @@ sf agent preview end --authoring-bundle <Bundle> --session-id <id> --json      #
 
 - `--list` prints all sessions and their turns as JSON. It opens nothing.
 - `--no-open` builds the page without launching a browser.
-- `--app <index.html>` uses a specific AgentLens build. Without it the script uses `$AGENTLENS_HTML`, then the AgentLens checkout this plugin ships in, then a copy cached from GitHub that refreshes daily.
+- `--app <index.html>` uses a specific AgentLens build. Without it the script uses `$AGENTLENS_HTML`, then the AgentLens repo checkout the skill sits in (if any), then a copy cached from GitHub that refreshes daily.
 - `--out <file>` sets where the page is written. By default it goes to `$TMPDIR/agentlens/`.
