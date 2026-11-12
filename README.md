@@ -76,6 +76,80 @@ It also reads sessions saved with `--output-dir` and the older `.sfdx/agents/<Ag
 
 The plugin's eval suite lives in `agentlens-plugin/evals/`. Run it with `cd agentlens-plugin && claude plugin eval . --scaffold --allow-tools Bash`.
 
+## Using the Claude Code Plugin Headlessly
+
+You can install and run the plugin from a shell, a script, or CI, with no interactive Claude Code session.
+
+### Install
+
+Install from the AgentLens marketplace in one command:
+
+```bash
+claude plugin install agentlens --marketplace forcedotcom/AgentLens
+```
+
+Add `--scope project` to record the plugin in the project's `.claude/settings.json`, so everyone working in that DX project gets it.
+
+Or skip installing and load the plugin from a local checkout of this repo for each run:
+
+```bash
+git clone https://github.com/forcedotcom/AgentLens.git
+claude -p "open agentlens" --plugin-dir ./AgentLens/agentlens-plugin
+```
+
+### Run
+
+Run `claude -p` from inside your Salesforce DX project. In headless mode nobody is there to approve tool calls, so pre-allow the tools the skill uses:
+
+```bash
+cd my-dx-project
+claude -p "open agentlens" \
+  --allowedTools "Skill" "Bash(node:*)" "Read" "Glob" "Grep"
+```
+
+The prompt works the same way it does interactively:
+
+```bash
+# A specific agent
+claude -p "visualize the OrderManagement agent in AgentLens" --allowedTools "Skill" "Bash(node:*)" "Read" "Glob" "Grep"
+
+# A specific exchange
+claude -p "open the turn where I searched for hotels in Chicago in AgentLens" --allowedTools "Skill" "Bash(node:*)" "Read" "Glob" "Grep"
+```
+
+Claude opens the trace in your default browser and replies with what it opened: agent, session, turn, the user message for that turn, and any warnings. Add `--output-format json` to get a JSON result, and read the reply from `.result`.
+
+### Preview, then visualize
+
+Run a programmatic preview session, then open exactly that session by its ID:
+
+```bash
+SID=$(sf agent preview start --authoring-bundle MyAgent --simulate-actions --json | jq -r .result.sessionId)
+sf agent preview send --authoring-bundle MyAgent --session-id "$SID" -u "Where is my order?" --json
+sf agent preview end  --authoring-bundle MyAgent --session-id "$SID" --json
+
+claude -p "open session $SID in agentlens" --allowedTools "Skill" "Bash(node:*)" "Read" "Glob" "Grep"
+```
+
+### Without Claude (CI, or no browser)
+
+The skill's trace picker is a standalone Node 18+ script with no dependencies, so you can call it directly. With `--no-open` it writes a self-contained AgentLens HTML page that works offline, for example to save as a CI artifact:
+
+```bash
+node ./AgentLens/agentlens-plugin/skills/open-agentlens/scripts/open-agentlens.mjs \
+  --agent MyAgent --no-open --out agentlens-trace.html
+```
+
+Useful options:
+
+- `--list` prints every session and turn as JSON.
+- `--session <id>`, `--turn <n>` and `--plan <planId>` pick a specific trace.
+- `--help` lists all options.
+
+The script prints the selection as JSON. It exits with code 2 when it finds no matching trace, and the message lists what it did find.
+
+The script needs the AgentLens app (`index.html`). If it runs from a checkout of this repo, it uses that checkout's `index.html`. Otherwise it downloads `index.html` from GitHub and caches it in `~/.cache/agentlens/`. On offline machines, pass `--app <path/to/index.html>` or set `AGENTLENS_HTML`.
+
 ## Why
 
 Agentforce traces are large JSON blobs. Reading them raw is painful. AgentLens turns them into something you can actually navigate — so you can debug handoff loops, understand why an LLM chose a tool, or figure out where latency is hiding.
