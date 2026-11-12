@@ -1,0 +1,10 @@
+{
+  "name": "agentlens",
+  "version": "0.1.0",
+  "description": "Open Agentforce traces from Salesforce CLI preview sessions in the AgentLens web app.",
+  "author": { "name": "Salesforce" },
+  "homepage": "https://github.com/forcedotcom/AgentLens",
+  "repository": "https://github.com/forcedotcom/AgentLens",
+  "license": "Apache-2.0",
+  "keywords": ["agentforce", "salesforce", "trace", "visualization"]
+}

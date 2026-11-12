@@ -29,6 +29,10 @@ Uses [Vitest](https://vitest.dev). Requires Node 18+.
   `allPlanSteps` / `planSteps` trace shapes.
 - `load-examples.test.js` — end-to-end: drives each fixture in `../example/`
   through `loadData` and asserts the rendered DOM state.
+- `open-agentlens-skill.test.js` — the Claude Code plugin's trace picker
+  (`agentlens-plugin/skills/open-agentlens/scripts/open-agentlens.mjs`): builds
+  fake DX projects in each CLI session layout, checks which trace is chosen,
+  and renders the generated page in jsdom.
 
 ## Fixtures
 

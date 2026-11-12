@@ -1,0 +1,34 @@
+schema_version: "1.1"
+name: open-latest
+description: Bare "open agentlens" in a DX project opens the newest session's last traced turn.
+tags: [trigger, selection]
+expected_outcome: Opens MultiSubagentNavigation, session 01a1d006, turn 2 of 2, and says so.
+context:
+  scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: open agentlens
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:agentlens:)?open-agentlens"'
+  - name: ran-script
+    type: tool_used
+    tool: Bash
+    input_match: 'open-agentlens\.mjs'
+  - name: opened-newest-turn
+    type: regex
+    target: trace
+    pattern: 'MultiSubagentNavigation-01a1d006-turn2\.html'
+    weight: 2
+  - name: reports-selection
+    type: llm
+    criteria: |
+      PASS if the final message says AgentLens was opened (or gives the page path to open) for the
+      MultiSubagentNavigation agent, identifies the trace as the latest/second turn (e.g. "turn 2 of 2")
+      or quotes its user message about checking an existing booking confirmation, and mentions that it
+      picked this agent by default because no agent was named (OrderManagement also has traces).
+      FAIL if it names a different agent or turn, claims success without having run anything, or omits
+      which trace was opened.

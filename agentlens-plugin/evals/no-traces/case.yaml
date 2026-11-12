@@ -1,0 +1,27 @@
+schema_version: "1.1"
+name: no-traces
+description: Project with no preview sessions; must say so and suggest running a preview instead of fabricating.
+tags: [failure]
+expected_outcome: Reports no traces were found and suggests sf agent preview; opens nothing.
+context:
+  scaffold_script: fixture.sh
+execution:
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: visualize my agent in agentlens
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:agentlens:)?open-agentlens"'
+  - name: no-page-built
+    type: regex
+    target: trace
+    pattern: 'agentlens/[^"\\]*\.html'
+    match: not_contains
+  - name: honest-guidance
+    type: llm
+    criteria: |
+      PASS if the final message tells the user no agent preview traces exist in this project yet and
+      suggests generating one with `sf agent preview` (interactive or start/send/end).
+      FAIL if it claims to have opened AgentLens with a trace, invents a trace, or gives no next step.

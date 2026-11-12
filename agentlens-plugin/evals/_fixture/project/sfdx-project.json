@@ -1,0 +1,1 @@
+{ "packageDirectories": [{ "path": "force-app", "default": true }], "name": "agentlens-eval", "sourceApiVersion": "66.0" }

@@ -56,6 +56,26 @@ Or search for **AgentLens Visualizer** in the VS Code Extensions panel (`Cmd+Shi
 
 The extension provides the same visualization inside VS Code with native theme integration — right-click any trace JSON file and select **Open with AgentLens**.
 
+### Claude Code Plugin
+
+Install the plugin in Claude Code:
+
+```
+/plugin install agentlens --marketplace forcedotcom/AgentLens
+```
+
+Inside a Salesforce DX project, say **"open AgentLens"** or **"visualize this in AgentLens"**. The plugin picks the right trace from your `sf agent preview` sessions and opens it in the AgentLens web app in your browser. You can be specific: name an agent ("show OrderManagement in AgentLens"), or point at one exchange ("the part where I searched for hotels").
+
+The Salesforce CLI writes one trace per agent reply to `<project>/.sfdx/agents/<Agent>/sessions/<sessionId>/traces/<planId>.json`. The plugin picks from those files like this:
+
+- It opens the newest session (by its `metadata.json` start time) that has a trace.
+- In that session it opens the last non-empty turn.
+- It skips greeting-only sessions and empty traces, and tells you when it does.
+
+It also reads sessions saved with `--output-dir` and the older `.sfdx/agents/<Agent>.agent/traces/` layout. See [`agentlens-plugin/skills/open-agentlens/SKILL.md`](agentlens-plugin/skills/open-agentlens/SKILL.md) for details.
+
+The plugin's eval suite lives in `agentlens-plugin/evals/`. Run it with `cd agentlens-plugin && claude plugin eval . --scaffold --allow-tools Bash`.
+
 ## Why
 
 Agentforce traces are large JSON blobs. Reading them raw is painful. AgentLens turns them into something you can actually navigate — so you can debug handoff loops, understand why an LLM chose a tool, or figure out where latency is hiding.
