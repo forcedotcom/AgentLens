@@ -129,6 +129,35 @@ describe('open-agentlens skill script', () => {
     expect(json.selected.turn).toBe(2);
   });
 
+  it('accepts a session\'s traces/ directory instead of searching the whole project', () => {
+    // Without this, a traces/ path fell through to "most recent" and opened Orders.
+    const { json } = run([join(older.dir, 'traces')], root);
+    expect(json.selected.agent).toBe('Service');
+    expect(json.selected.sessionId).toBe(uuid(1));
+  });
+
+  it('names the agent from an --output-dir copy that has no metadata', () => {
+    const copy = join(root, 'temp', 'saved', 'Service', `session_${uuid(9)}`);
+    write(join(copy, 'traces', `${uuid(10)}.json`), TRACE);
+    const { json } = run([copy], root);
+    expect(json.selected.agent).toBe('Service');
+    expect(json.selected.sessionId).toBe(uuid(9));
+  });
+
+  it('accepts a legacy <Agent>.agent directory as the path', () => {
+    const { json } = run([join(root, '.sfdx', 'agents', 'Legacy.agent')], root);
+    expect(json.selected.agent).toBe('Legacy');
+    expect(json.selected.sessionId).toBe(uuid(4));
+    expect(json.selected.planId).toBe(uuid(5));
+  });
+
+  it('rejects selection filters combined with a trace file path', () => {
+    const file = join(older.dir, 'traces', `${older.planIds[0]}.json`);
+    const res = run([file, '--turn', '2'], root);
+    expect(res.code).toBe(2);
+    expect(res.stderr).toMatch(/cannot be combined with a trace file/);
+  });
+
   it('reads the legacy <Agent>.agent/traces layout', () => {
     const { json } = run(['--agent', 'Legacy'], root);
     expect(json.selected.sessionId).toBe(uuid(4));

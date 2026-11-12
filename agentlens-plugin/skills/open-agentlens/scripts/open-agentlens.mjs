@@ -166,9 +166,24 @@ function readLegacySessions(agentDir, agent) {
   }
   return [...bySession].map(([sessionId, turns]) => {
     turns.sort((a, b) => a.mtime - b.mtime);
+    const startTime = turns[0].mtime;
     turns.forEach(t => delete t.mtime);
-    return finishSession({ agent, sessionId, dir: tracesDir, source: 'legacy', startTime: statSync(join(tracesDir, basename(turns[0].file))).mtimeMs, turns });
+    return finishSession({ agent, sessionId, dir: tracesDir, source: 'legacy', startTime, turns });
   });
+}
+
+// A directory the caller pointed at directly: a session directory (the
+// tracesPath from `sf agent preview end`, or an --output-dir copy), its
+// traces/ subdirectory, or a legacy <Agent>.agent directory or its traces/.
+// Returns null when it is none of these, so the caller searches the project.
+function sessionsAt(dir) {
+  const d = basename(dir) === 'traces' ? dirname(dir) : dir;
+  if (basename(d).endsWith('.agent')) return readLegacySessions(d, basename(d).slice(0, -'.agent'.length));
+  if (!existsSync(join(d, 'traces')) && !existsSync(join(d, 'turn-index.json'))) return null;
+  // .sfdx/agents/<Agent>/sessions/<id>  or  <output-dir>/<Agent>/session_<id>
+  const parent = dirname(d);
+  const agentHint = basename(parent) === 'sessions' ? basename(dirname(parent)) : basename(parent);
+  return [readSession(d, agentHint, 'path')];
 }
 
 function findProjectRoot(start) {
@@ -259,6 +274,11 @@ function findLocalCheckout() {
   return null;
 }
 
+// The loader below calls these app functions; a page without them can't be used.
+function isCompatibleApp(html) {
+  return html.includes('function loadData(') && html.includes('function parseTraceJson(');
+}
+
 async function resolveApp(opts, warnings) {
   const explicit = opts.app ?? process.env.AGENTLENS_HTML;
   if (explicit) {
@@ -275,7 +295,7 @@ async function resolveApp(opts, warnings) {
     const res = await fetch(APP_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
-    if (!html.includes('function loadData(')) throw new Error('downloaded page is not the AgentLens app');
+    if (!isCompatibleApp(html)) throw new Error('downloaded page is not a compatible AgentLens app');
     mkdirSync(dirname(cache), { recursive: true });
     writeFileSync(cache, html);
     return cache;
@@ -292,7 +312,7 @@ function scriptLiteral(s) {
 }
 
 export function buildPage(appHtml, traceRaw, title) {
-  if (!appHtml.includes('function loadData(') || !appHtml.includes('function parseTraceJson(')) {
+  if (!isCompatibleApp(appHtml)) {
     throw new Error('The AgentLens page does not expose loadData/parseTraceJson; it may be an incompatible version.');
   }
   const loader = `<script>
@@ -338,14 +358,16 @@ async function main() {
   let sessions;
   let fixed = null; // an explicitly named trace file
   if (statSync(target).isFile()) {
+    if (opts.agent || opts.session || opts.turn !== null || opts.plan) {
+      throw new UsageError('--agent, --session, --turn and --plan pick among sessions; they cannot be combined with a trace file path.');
+    }
     fixed = target;
-  } else if (existsSync(join(target, 'traces')) || existsSync(join(target, 'turn-index.json'))) {
-    sessions = [readSession(target, basename(dirname(dirname(target))), 'path')];
   } else {
-    const root = findProjectRoot(target);
-    sessions = collectSessions(root);
+    sessions = sessionsAt(target);
+    const where = sessions ? target : findProjectRoot(target);
+    sessions ??= collectSessions(where);
     if (!sessions.length) {
-      throw new UsageError(`No agent preview traces under ${root}. Run \`sf agent preview\` (or preview start/send/end) in this project first, or pass a trace file.`);
+      throw new UsageError(`No agent preview traces under ${where}. Run \`sf agent preview\` (or preview start/send/end) in this project first, or pass a trace file.`);
     }
   }
 
