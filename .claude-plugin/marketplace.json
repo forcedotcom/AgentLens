@@ -1,0 +1,14 @@
+{
+  "name": "agentlens",
+  "owner": {
+    "name": "Salesforce"
+  },
+  "description": "Claude Code plugins for AgentLens, the Agentforce trace visualizer.",
+  "plugins": [
+    {
+      "name": "agentlens",
+      "source": "./agentlens-plugin",
+      "description": "Open Agentforce traces from Salesforce CLI preview sessions in the AgentLens web app."
+    }
+  ]
+}

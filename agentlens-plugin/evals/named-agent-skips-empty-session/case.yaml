@@ -1,0 +1,33 @@
+schema_version: "1.1"
+name: named-agent-skips-empty-session
+description: Named agent whose newest session has only a greeting; must open the newest session with a trace and say why.
+tags: [selection]
+expected_outcome: Opens OrderManagement session d5766790 turn 4, and tells the user the newer session 7c1e2b9a had no trace yet.
+context:
+  scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: Show me what the OrderManagement agent did in AgentLens.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:agentlens:)?open-agentlens"'
+  - name: opened-ordermanagement
+    type: regex
+    target: trace
+    pattern: 'OrderManagement-d5766790-turn4\.html'
+    weight: 2
+  - name: did-not-open-other-agent
+    type: regex
+    target: trace
+    pattern: 'MultiSubagentNavigation-01a1d006-turn\d\.html'
+    match: not_contains
+  - name: explains-skipped-session
+    type: llm
+    criteria: |
+      PASS if the final message says it opened an OrderManagement trace (session d5766790..., the last of
+      its 4 turns) AND tells the user that the most recent OrderManagement session (7c1e2b9a...) has no
+      trace yet / only a greeting, so an earlier session was used.
+      FAIL if it opens a different agent, or does not mention that the newest session was skipped.

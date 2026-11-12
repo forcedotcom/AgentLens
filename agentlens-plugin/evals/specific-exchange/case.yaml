@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: specific-exchange
+description: User refers to an exchange by content; the skill must find that turn, not the latest one.
+tags: [selection]
+expected_outcome: Opens MultiSubagentNavigation turn 1 (the Chicago hotel search), not turn 2.
+context:
+  scaffold_script: fixture.sh
+execution:
+  max_turns: 15
+  allowed_tools: [Read, Glob, Grep, Skill]
+  prompt: Can you visualize in AgentLens the part of my last preview where I searched for hotels in Chicago?
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:agentlens:)?open-agentlens"'
+  - name: opened-hotel-search-turn
+    type: regex
+    target: trace
+    pattern: 'MultiSubagentNavigation-01a1d006-turn1\.html'
+    weight: 3
+  - name: reports-selection
+    type: llm
+    criteria: |
+      PASS if the final message says it opened (or built the page for) turn 1 of the MultiSubagentNavigation
+      session — the exchange where the user asked to find hotels in Chicago — in AgentLens.
+      FAIL if it says it opened turn 2 / the booking-confirmation question, a different agent, or does not
+      say which exchange was opened.
